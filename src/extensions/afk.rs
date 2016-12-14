@@ -8,7 +8,7 @@ fn notify_interval() -> Duration {
   Duration::seconds(60)
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Afk {
   who: Option<String>,
   afk_at: Option<DateTime<UTC>>,
@@ -74,6 +74,7 @@ impl Afk {
   fn is_afk(&self)     -> bool { self.afk_at.is_some() }
 }
 
+
 impl BotExtension for Afk {
   fn new() -> Self {
     Afk {
@@ -84,7 +85,7 @@ impl BotExtension for Afk {
     }
   }
 
-  fn should_process(&self, msg: &tg::Message, ctx: &Context) -> bool {
+  fn should_process(&self, msg: &tg::Message, _: &Context) -> bool {
     if self.is_afk() {
       return true
     }
@@ -112,6 +113,13 @@ impl BotExtension for Afk {
   }
   fn name(&self) -> &str {
     "afk"
+  }
+
+  fn save(&self) -> JsonValue {
+    serde_json::to_value(self)
+  }
+  fn load(&mut self, val: JsonValue) {
+    *self = serde_json::from_value(val).unwrap()
   }
 }
 

@@ -24,14 +24,36 @@ impl ExtensionStack {
     }
   }
 
-  pub fn report(&self) {
+  // pub fn report(&self) {
+  //   for ext in &self.extensions {
+  //     println!("==== Report for {} ====\n{}\n",
+  //              ext.name(),
+  //              ext.report())
+  //   }
+  // }
+
+  #[allow(dead_code)]
+  pub fn save(&self) -> JsonValue {
+    let mut obj = serde_json::Map::new();
     for ext in &self.extensions {
-      println!("==== Report for {} ====\n{}\n",
-               ext.name(),
-               ext.report())
+      obj.insert(
+        ext.name().into(),
+        ext.save()
+      );
     }
+    JsonValue::Object(obj)
   }
 
-  pub fn export(&self) {
+  pub fn load(&mut self, json: JsonValue) {
+    if let JsonValue::Object(obj) = json {
+      for ext in &mut self.extensions {
+        if let Some(ext_json) = obj.get(ext.name().into()) {
+          info!("Loading config to extension: {}", ext.name());
+          ext.load(ext_json.clone());
+        } else {
+          info!("Config to extension {} is not available", ext.name());
+        }
+      }
+    }
   }
 }

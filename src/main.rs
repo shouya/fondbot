@@ -1,6 +1,8 @@
 #![feature(proc_macro)]
 #[macro_use]
-pub extern crate serde_derive;
+extern crate serde_derive;
+#[macro_use]
+extern crate log;
 
 mod common;
 mod extensions;

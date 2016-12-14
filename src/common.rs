@@ -1,7 +1,8 @@
 pub extern crate telegram_bot;
-
 pub extern crate serde_json;
+pub extern crate erased_serde;
 
+pub use serde_json::Value as JsonValue;
 
 pub use bot::Bot;
 pub use context::Context;
@@ -16,6 +17,9 @@ pub trait BotExtension {
   /// Report current status
   fn report(&self) -> String;
   fn name(&self)   -> &str;
+
+  fn save(&self) -> JsonValue;
+  fn load(&mut self, JsonValue);
 }
 
 pub fn msg_txt(msg: &tg::Message) -> Option<String> {
