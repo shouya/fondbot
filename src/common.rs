@@ -1,8 +1,11 @@
 pub extern crate telegram_bot;
+pub extern crate serde;
 pub extern crate serde_json;
 pub extern crate erased_serde;
 
 pub use serde_json::Value as JsonValue;
+pub use serde::de::Deserialize;
+pub use serde::ser::Serialize;
 
 pub use bot::Bot;
 pub use context::Context;
@@ -57,4 +60,10 @@ pub fn user_name(user: &tg::User) -> String {
   let formal_name = user.first_name + &last_name;
 
   user.username.unwrap_or(formal_name)
+}
+
+pub fn eat_updates(bot: &Bot) {
+  while let Ok(vec) = bot.api.get_updates(None, None, None) {
+    if vec.len() == 0 { return }
+  }
 }
