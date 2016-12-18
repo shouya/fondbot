@@ -3,12 +3,14 @@
 extern crate serde_derive;
 #[macro_use]
 extern crate log;
+extern crate env_logger;
 
 mod common;
 mod extensions;
 mod ext_stack;
 mod context;
 mod bot;
+mod services;
 
 use common::*;
 use extensions::*;
@@ -41,22 +43,27 @@ fn main() {
   std::env::set_var("TELEGRAM_BOT_TOKEN",
                     "167818725:AAHoBuwE2GGU63yrApdk4q-8xYqR8ng0v7w");
 
-  let api = tg::Api::from_env("TELEGRAM_BOT_TOKEN").unwrap();
-  println!("Running as {:?}", api.get_me());
-  let bot = Bot::new(api);
+  env_logger::init().unwrap();
 
-  eat_updates(&bot);
+  let bot = Bot::from_env();
+  info!("Running as {:?}", bot.api.get_me());
+
+  info!("Eating up all previous messages!");
+  info!("Eaten {} messages", eat_updates(&bot));
 
   let mut ctx = {
     let mut exts = ExtensionStack::new();
 
     exts.plug(afk::Afk::new());
+    exts.plug(tracker::Tracker::new());
 
     Context::new(bot, exts, "state.json".into())
   };
 
-  info!("loading state");
+  info!("Loading state");
   ctx.load_state();
+
+  info!("Started serving");
   serve(&mut ctx);
   // exts.process(ctx);
 }
