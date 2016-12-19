@@ -24,8 +24,7 @@ fn process_message(ctx: &Context, msg: &tg::Message) {
 
 fn serve(ctx: &mut Context) {
     let mut listener = {
-        let api = &ctx.bot.api;
-        api.listener(tg::ListeningMethod::LongPoll(None))
+        ctx.bot.listener(tg::ListeningMethod::LongPoll(None))
     };
 
     listener.listen(move |u| {
@@ -46,8 +45,8 @@ fn main() {
 
     env_logger::init().unwrap();
 
-    let bot = Bot::from_env();
-    info!("Running as {:?}", bot.api.get_me());
+    let bot = Bot::from_default_env();
+    info!("Running as {:?}", bot.get_me());
 
     info!("Eating up all previous messages!");
     info!("Consumed {} messages", bot.consume_updates());

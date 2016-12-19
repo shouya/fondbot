@@ -1,29 +1,71 @@
 use common::*;
 
 pub type Integer = i64;
+pub type Bot = tg::Api;
 
-pub struct Bot {
-    pub api: tg::Api,
-}
+pub trait TgApiExt {
+    fn from_default_env() -> Self;
+    fn send_raw<T: Into<String>>(&self,
+                                 chat_id: Integer,
+                                 reply_to_msg_id: Option<Integer>,
+                                 txt: T,
+                                 parse_mode: Option<tg::ParseMode>);
+    fn consume_updates(&self) -> usize;
 
-impl Bot {
-    pub fn from_env() -> Self {
-        Bot { api: tg::Api::from_env("TELEGRAM_BOT_TOKEN").unwrap() }
+    fn reply_to<R, T>(&self, msg: R, txt: T)
+        where R: Repliable,
+              T: Into<String>
+    {
+        self.send_raw(msg.chat_id(), msg.message_id(), txt, None);
     }
 
-    pub fn send_raw<T: Into<String>>(&self,
-                                     chat_id: Integer,
-                                     reply_to_msg_id: Option<Integer>,
-                                     txt: T,
-                                     parse_mode: Option<tg::ParseMode>) {
+    fn reply_md_to<R, T>(&self, msg: R, md_txt: T)
+        where R: Repliable,
+              T: Into<String>
+    {
+        let markdown = Some(tg::ParseMode::Markdown);
+        self.send_raw(msg.chat_id(), msg.message_id(), md_txt, markdown);
+    }
+}
+
+pub trait TgMessageExt {
+    fn msg_txt(&self) -> Option<String>;
+    fn is_cmd(&self, prefix: &str) -> bool;
+    fn is_cmds(&self, prefixes: &str) -> bool;
+    fn cmd_cmd(&self) -> Option<String>;
+    fn cmd_arg(&self, prefix: &str) -> Option<String>;
+}
+
+pub trait TgUserExt {
+    fn user_name(&self) -> String;
+}
+
+pub trait Repliable {
+    fn chat_id(&self) -> Integer;
+    fn message_id(&self) -> Option<Integer>;
+}
+
+/// ///////////////// implementing the extensions  ////////////////////
+
+
+impl TgApiExt for tg::Api {
+    fn from_default_env() -> Self {
+        Self::from_env("TELEGRAM_BOT_TOKEN").unwrap()
+    }
+
+    fn send_raw<T: Into<String>>(&self,
+                                 chat_id: Integer,
+                                 reply_to_msg_id: Option<Integer>,
+                                 txt: T,
+                                 parse_mode: Option<tg::ParseMode>) {
         let mut retry_count = 3;
         let txt = txt.into();
-        while let Err(err) = self.api.send_message(chat_id, // chat id
-                                                   txt.clone(), // txt
-                                                   parse_mode, // parse mode
-                                                   None, // disable web preview
-                                                   reply_to_msg_id, // reply to msg id
-                                                   None) {
+        while let Err(err) = self.send_message(chat_id, // chat id
+                                               txt.clone(), // txt
+                                               parse_mode, // parse mode
+                                               None, // disable web preview
+                                               reply_to_msg_id, // reply to msg id
+                                               None) {
             // reply markup (kbd)
             warn!("send message failed {}, retrying {}", err, retry_count);
             retry_count -= 1;
@@ -32,27 +74,11 @@ impl Bot {
             }
         }
     }
-    pub fn reply_raw<T: Into<String>>(&self,
-                                      chat_id: Integer,
-                                      msg_id: Integer,
-                                      txt: T,
-                                      parse_mode: Option<tg::ParseMode>) {
-        self.send_raw(chat_id, Some(msg_id), txt, parse_mode);
-    }
 
-    pub fn reply_to<T: Into<String>>(&self, msg: &tg::Message, txt: T) {
-        self.reply_raw(msg.chat.id(), msg.message_id, txt, None);
-    }
-
-    pub fn reply_markdown_to<T: Into<String>>(&self, msg: &tg::Message, md_txt: T) {
-        let markdown = Some(tg::ParseMode::Markdown);
-        self.reply_raw(msg.chat.id(), msg.message_id, md_txt, markdown);
-    }
-
-    pub fn consume_updates(&self) -> usize {
+    fn consume_updates(&self) -> usize {
         let mut count = 0;
         let mut last = 0;
-        while let Ok(updates) = self.api.get_updates(Some(last), None, None) {
+        while let Ok(updates) = self.get_updates(Some(last), None, None) {
             if updates.is_empty() {
                 break;
             }
@@ -65,75 +91,105 @@ impl Bot {
     }
 }
 
-
-pub fn msg_txt(msg: &tg::Message) -> Option<String> {
-    if let tg::MessageType::Text(ref txt) = msg.msg {
-        Some(txt.clone().into())
-    } else {
-        None
+impl<'a> TgMessageExt for &'a tg::Message {
+    fn msg_txt(&self) -> Option<String> {
+        if let tg::MessageType::Text(ref txt) = self.msg {
+            Some(txt.clone().into())
+        } else {
+            None
+        }
     }
-}
 
-pub fn is_cmd(msg: &tg::Message, prefix: &str) -> bool {
-    if let Some(txt) = msg_txt(msg) {
-        txt.eq(&format!("/{}", prefix)) || txt.starts_with(&format!("/{} ", prefix))
-    } else {
+    fn is_cmd(&self, prefix: &str) -> bool {
+        if let Some(txt) = self.msg_txt() {
+            txt.eq(&format!("/{}", prefix)) || txt.starts_with(&format!("/{} ", prefix))
+        } else {
+            false
+        }
+    }
+
+    // retrun true if any of prefixes matches, prefixes are splitted by whitespaces
+    fn is_cmds(&self, prefixes: &str) -> bool {
+        for prefix in prefixes.split_whitespace() {
+            if self.is_cmd(prefix) {
+                return true;
+            }
+        }
         false
     }
-}
 
-// retrun true if any of prefixes matches, prefixes are splitted by whitespaces
-pub fn is_cmds(msg: &tg::Message, prefixes: &str) -> bool {
-    for prefix in prefixes.split_whitespace() {
-        if is_cmd(msg, prefix) {
-            return true;
+    fn cmd_cmd(&self) -> Option<String> {
+        if let Some(txt) = self.msg_txt() {
+            if txt.len() <= 1 {
+                return None;
+            }
+            if txt.chars().nth(0).unwrap() != '/' {
+                return None;
+            }
+            if let Some(cmd) = txt[1..].split_whitespace().next() {
+                return Some(cmd.into());
+            }
         }
-    }
-    false
-}
-
-pub fn cmd_cmd(msg: &tg::Message) -> Option<String> {
-    if let Some(txt) = msg_txt(msg) {
-        if txt.len() <= 1 {
-            return None;
-        }
-        if txt.chars().nth(0).unwrap() != '/' {
-            return None;
-        }
-        if let Some(cmd) = txt[1..].split_whitespace().next() {
-            return Some(cmd.into());
-        }
-    }
-    None
-}
-
-// pub fn cmd_arg_nocheck(msg: &tg::Message) -> Option<String> {
-//   if let Some(txt) = msg_txt(msg) {
-//     txt.as_str().split_whitespace().nth(1).map(String::from)
-//   } else {
-//     None
-//   }
-// }
-
-pub fn cmd_arg(msg: &tg::Message, prefix: &str) -> Option<String> {
-    if !is_cmd(msg, prefix) {
         None
-    } else {
-        let txt = msg_txt(msg).unwrap();
-        if prefix.len() + 2 >= txt.len() {
-            return None;
-        }
+    }
 
-        let (_, b) = txt.split_at(prefix.len() + 2);
-        Some(b.to_string())
+    // pub fn cmd_arg_nocheck(&self, -> Option<String> {
+    //   if let Some(txt) = msg_txt(msg) {
+    //     txt.as_str().split_whitespace().nth(1).map(String::from)
+    //   } else {
+    //     None
+    //   }
+    // }
+
+    fn cmd_arg(&self, prefix: &str) -> Option<String> {
+        if !self.is_cmd(prefix) {
+            None
+        } else {
+            let txt = self.msg_txt().unwrap();
+            if prefix.len() + 2 >= txt.len() {
+                return None;
+            }
+
+            let (_, b) = txt.split_at(prefix.len() + 2);
+            Some(b.to_string())
+        }
     }
 }
 
-pub fn user_name(user: &tg::User) -> String {
-    let user = user.clone();
-    let add_space = |x: String| " ".to_string() + &x;
-    let last_name = user.last_name.map_or("".into(), add_space);
-    let formal_name = user.first_name + &last_name;
+impl TgUserExt for tg::User {
+    fn user_name(&self) -> String {
+        let user = self.clone();
+        let add_space = |x: String| " ".to_string() + &x;
+        let last_name = user.last_name.map_or("".into(), add_space);
+        let formal_name = user.first_name + &last_name;
 
-    user.username.unwrap_or(formal_name)
+        user.username.unwrap_or(formal_name)
+    }
+}
+
+impl<'a> Repliable for &'a tg::Message {
+    fn chat_id(&self) -> Integer {
+        self.chat.id()
+    }
+    fn message_id(&self) -> Option<Integer> {
+        Some(self.message_id)
+    }
+}
+
+impl Repliable for (Integer, Integer) {
+    fn chat_id(&self) -> Integer {
+        self.0
+    }
+    fn message_id(&self) -> Option<Integer> {
+        Some(self.1)
+    }
+}
+
+impl Repliable for (Integer, Option<Integer>) {
+    fn chat_id(&self) -> Integer {
+        self.0
+    }
+    fn message_id(&self) -> Option<Integer> {
+        self.1
+    }
 }

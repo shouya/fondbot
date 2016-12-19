@@ -6,13 +6,13 @@ use std::fs::File;
 use std::path::Path;
 
 pub struct Context {
-    pub bot: Bot,
+    pub bot: tg::Api,
     pub exts: RefCell<ExtensionStack>,
     pub save_to: String,
 }
 
 impl Context {
-    pub fn new(bot: Bot, exts: ExtensionStack, loc: String) -> Context {
+    pub fn new(bot: tg::Api, exts: ExtensionStack, loc: String) -> Context {
         Context {
             bot: bot,
             exts: RefCell::new(exts),

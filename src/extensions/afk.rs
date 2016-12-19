@@ -18,9 +18,9 @@ pub struct Afk {
 
 impl Afk {
     fn set_afk(&mut self, msg: &tg::Message) {
-        self.who = Some(user_name(&msg.from));
+        self.who = Some(msg.from.user_name());
         self.afk_at = Some(Self::now());
-        self.reason = cmd_arg(msg, "afk");
+        self.reason = msg.cmd_arg("afk");
         self.last_notify = Some(Self::now() - notify_interval());
     }
 
@@ -54,7 +54,7 @@ impl Afk {
                           duration,
                           reason);
 
-        bot.reply_markdown_to(msg, txt);
+        bot.reply_md_to(msg, txt);
     }
 
     #[allow(unused_must_use)]
@@ -106,17 +106,17 @@ impl BotExtension for Afk {
         if self.is_afk() {
             return true;
         }
-        is_cmd(msg, "afk")
+        msg.is_cmd("afk")
     }
 
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
-        if is_cmd(msg, "afk") {
+        if msg.is_cmd("afk") {
             self.set_afk(msg);
             ctx.bot.reply_to(msg, "Afk set");
             return;
         }
 
-        if is_cmd(msg, "noafk") {
+        if msg.is_cmd("noafk") {
             self.unset_afk();
             ctx.bot.reply_to(msg, "Afk unset");
             return;

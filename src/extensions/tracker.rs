@@ -60,33 +60,33 @@ impl BotExtension for Tracker {
     }
 
     fn should_process(&self, msg: &tg::Message, _: &Context) -> bool {
-        is_cmds(msg, "track untrack list query cleanup")
+        msg.is_cmds("track untrack list query cleanup")
     }
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
-        match cmd_cmd(msg).unwrap().as_ref() {
+        match msg.cmd_cmd().unwrap().as_ref() {
             "track" => {
-                if let Some(tracking_no) = cmd_arg(msg, "track") {
+                if let Some(tracking_no) = msg.cmd_arg("track") {
                     self.track(tracking_no, msg);
                 } else {
                     ctx.bot.reply_to(msg, "Usage: /track <tracking_no>");
                 }
             }
             "untrack" => {
-                if let Some(tracking_no) = cmd_arg(msg, "untrack") {
+                if let Some(tracking_no) = msg.cmd_arg("untrack") {
                     self.untrack(tracking_no);
                 } else {
                     ctx.bot.reply_to(msg, "Usage: /untrack <tracking_no>");
                 }
             }
             "list" => {
-                ctx.bot.reply_markdown_to(msg, self.list());
+                ctx.bot.reply_md_to(msg, self.list());
             }
             "query" => {
-                ctx.bot.reply_markdown_to(msg, "not implemented yet");
+                ctx.bot.reply_md_to(msg, "not implemented yet");
             }
             "cleanup" => {
                 let reply = format!("{}---\n{} entries removed.", self.list(), self.cleanup());
-                ctx.bot.reply_markdown_to(msg, reply);
+                ctx.bot.reply_md_to(msg, reply);
             }
             _ => ctx.bot.reply_to(msg, "Invalid usage of tracker plugin"),
         }
@@ -259,7 +259,7 @@ impl ProgressTracker {
     }
 
     fn bot(&self) -> Bot {
-        Bot::from_env()
+        Bot::from_default_env()
     }
 
     fn update_progress(&self) {
@@ -300,10 +300,7 @@ impl ProgressTracker {
             return;
         }
 
-        self.bot().send_raw(self.chat_id,
-                            self.last_msg_id.get(),
-                            self.progress_text(),
-                            Some(tg::ParseMode::Markdown));
+        self.bot().reply_md_to((self.chat_id, self.last_msg_id.get()), self.progress_text());
 
         self.update_ack_len();
     }
@@ -320,11 +317,7 @@ impl ProgressTracker {
 
     fn report_done(&self) {
         self.report_progress();
-        self.bot().send_raw(
-      self.chat_id,
-      self.last_msg_id.get(),
-      "此快遞已送達，追蹤終止 (使用 /cleanup 指令清除失效的追蹤)",
-      None // not markdown
-    )
+        self.bot().reply_to((self.chat_id, self.last_msg_id.get()),
+      "此快遞已送達，追蹤終止 (使用 /cleanup 指令清除失效的追蹤)")
     }
 }
