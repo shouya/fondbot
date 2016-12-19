@@ -62,9 +62,11 @@ impl Afk {
         use std::fmt::Write;
         let mut str = String::new();
         if d.num_days() >= 1 {
-            write!(&mut str, "{} days", d.num_days());        }
+            write!(&mut str, "{} days", d.num_days());
+        }
         if d.num_hours() >= 1 {
-            write!(&mut str, "{} hours", d.num_hours());        }
+            write!(&mut str, "{} hours", d.num_hours());
+        }
         if d.num_minutes() >= 1 {
             write!(&mut str, "{} mins", d.num_minutes());
         }
