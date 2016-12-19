@@ -12,6 +12,7 @@ mod ext_stack;
 mod context;
 mod bot;
 mod services;
+mod utils;
 
 use common::*;
 use extensions::*;

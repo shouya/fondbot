@@ -9,22 +9,35 @@ pub trait TgApiExt {
                                  chat_id: Integer,
                                  reply_to_msg_id: Option<Integer>,
                                  txt: T,
-                                 parse_mode: Option<tg::ParseMode>);
+                                 parse_mode: Option<tg::ParseMode>)
+                                 -> Result<tg::Message>;
     fn consume_updates(&self) -> usize;
 
+    fn reply_and_get_msg<R, T>(&self, msg: R, txt: T) -> Result<tg::Message>
+        where R: Repliable,
+              T: Into<String>
+    {
+        self.send_raw(msg.chat_id(), msg.message_id(), txt, None)
+    }
+    fn reply_md_and_get_msg<R, T>(&self, msg: R, md_txt: T) -> Result<tg::Message>
+        where R: Repliable,
+              T: Into<String>
+    {
+        let markdown = Some(tg::ParseMode::Markdown);
+        self.send_raw(msg.chat_id(), msg.message_id(), md_txt, markdown)
+    }
     fn reply_to<R, T>(&self, msg: R, txt: T)
         where R: Repliable,
               T: Into<String>
     {
-        self.send_raw(msg.chat_id(), msg.message_id(), txt, None);
+        self.send_raw(msg.chat_id(), msg.message_id(), txt, None).omit();
     }
-
     fn reply_md_to<R, T>(&self, msg: R, md_txt: T)
         where R: Repliable,
               T: Into<String>
     {
         let markdown = Some(tg::ParseMode::Markdown);
-        self.send_raw(msg.chat_id(), msg.message_id(), md_txt, markdown);
+        self.send_raw(msg.chat_id(), msg.message_id(), md_txt, markdown).omit();
     }
 }
 
@@ -57,20 +70,26 @@ impl TgApiExt for tg::Api {
                                  chat_id: Integer,
                                  reply_to_msg_id: Option<Integer>,
                                  txt: T,
-                                 parse_mode: Option<tg::ParseMode>) {
-        let mut retry_count = 3;
+                                 parse_mode: Option<tg::ParseMode>)
+                                 -> Result<tg::Message> {
+        let mut retry_count = 0;
         let txt = txt.into();
-        while let Err(err) = self.send_message(chat_id, // chat id
-                                               txt.clone(), // txt
-                                               parse_mode, // parse mode
-                                               None, // disable web preview
-                                               reply_to_msg_id, // reply to msg id
-                                               None) {
-            // reply markup (kbd)
-            warn!("send message failed {}, retrying {}", err, retry_count);
-            retry_count -= 1;
-            if retry_count == 0 {
-                break;
+        loop {
+            let res = self.send_message(chat_id, // chat id
+                                        txt.clone(), // txt
+                                        parse_mode, // parse mode
+                                        None, // disable web preview
+                                        reply_to_msg_id, // reply to msg id
+                                        None);
+            match res {
+                Err(err) => {
+                    retry_count += 1;
+                    warn!("send message failed {}, retrying {}", err, retry_count);
+                    if retry_count > 3 {
+                        return Err("Eventually failed to send message".into());
+                    }
+                }
+                Ok(msg) => return Ok(msg),
             }
         }
     }

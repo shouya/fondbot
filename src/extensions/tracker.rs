@@ -14,17 +14,10 @@ type TrackerHandle = Sender<Signal>;
 #[derive(Clone)]
 enum Signal {
     Tick, // used by the periodic timer
-    Ignore, // used to test if the worker is invalidated
+    Ping, // used to test if the worker is invalidated
     Quit, // used to tell the worker to halt
     Save(Sender<TrackerState>), // used to get a copy of current worker state
-}
-
-// convert Result<T, E: Debug> to Result<T, String>
-type Result<T> = std::result::Result<T, String>;
-macro_rules! try_strerr {
-  [ $maybe:expr ] => {
-    try!($maybe.map_err(|e| format!("{:?}", e)))
-  }
+    Report,
 }
 
 pub struct Tracker {
@@ -81,7 +74,9 @@ impl BotExtension for Tracker {
             }
             "untrack" => {
                 if let Some(tracking_no) = msg.cmd_arg("untrack") {
-                    self.untrack(tracking_no);
+                    self.untrack(&tracking_no);
+                    let body = format!("Tracker {} killed", &tracking_no);
+                    ctx.bot.reply_to(msg, body);
                 } else {
                     ctx.bot.reply_to(msg, "Usage: /untrack <tracking_no>");
                 }
@@ -90,13 +85,19 @@ impl BotExtension for Tracker {
                 ctx.bot.reply_md_to(msg, self.list());
             }
             "query" => {
-                ctx.bot.reply_md_to(msg, "not implemented yet");
+                if let Some(tracking_no) = msg.cmd_arg("query") {
+                    self.query(tracking_no);
+                } else {
+                    ctx.bot.reply_to(msg, "Usage: /query <tracking_no>");
+                }
             }
             "cleanup" => {
                 let reply = format!("{}---\n{} entries removed.", self.list(), self.cleanup());
                 ctx.bot.reply_md_to(msg, reply);
             }
-            _ => ctx.bot.reply_to(msg, "Invalid usage of tracker plugin"),
+            _ => {
+                ctx.bot.reply_to(msg, "Invalid usage of tracker plugin");
+            }
         }
     }
 
@@ -148,21 +149,25 @@ impl Tracker {
         let handle = pt.schedule();
         self.trackers.insert(tracking_no, handle);
     }
-    fn untrack(&mut self, tracking_no: String) {
-        let handle = match self.trackers.get(&tracking_no) {
-            Some(handle) => handle.clone(),
+    fn untrack(&mut self, tracking_no: &String) {
+        match self.trackers.get(tracking_no) {
+            Some(handle) => handle.send(Signal::Quit).omit(),
             None => {
                 warn!("Tracker is not active");
                 return;
             }
         };
-        match handle.send(Signal::Quit) {
-            Ok(_) => {}
-            Err(_) => warn!("Untracking a tracker that is already finished"),
-        };
-        self.trackers.remove(&tracking_no);
+        self.trackers.remove(tracking_no);
     }
-
+    fn query(&self, tracking_no: String) {
+        match self.trackers.get(&tracking_no) {
+            Some(handle) => handle.send(Signal::Report).omit(),
+            None => {
+                warn!("Trying to query invalid tracker");
+                return;
+            }
+        };
+    }
     fn cleanup(&mut self) -> usize {
         let before_len = self.trackers.len();
         let dead_trackers: Vec<String> = {
@@ -192,7 +197,7 @@ impl Tracker {
     }
 
     fn is_alive(th: &TrackerHandle) -> bool {
-        th.send(Signal::Ignore).is_ok()
+        th.send(Signal::Ping).is_ok()
     }
 
     fn request<URL: IntoUrl, T: Deserialize>(url: URL) -> Result<T> {
@@ -247,7 +252,7 @@ impl ProgressTracker {
 
         Ok(ProgressTracker {
             last_msg_id: Cell::new(reply.message_id()),
-            ack_len: Cell::new(progress.data.len()),
+            ack_len: Cell::new(0),
             progress: RefCell::new(progress),
             chat_id: reply.chat_id(),
         })
@@ -263,18 +268,19 @@ impl ProgressTracker {
                 match signal {
                     Signal::Tick => {
                         self.update_progress();
+                        self.report_progress(false);
+
                         if self.done() {
                             self.report_done();
                             break;
                         }
-                        self.report_progress();
                     }
-                    // Signal::Dump(tx) => unimplemented!(), // send(out, self.clone())
                     Signal::Quit => break,
-                    Signal::Ignore => {} // Just ignore this
+                    Signal::Ping => {} // Just Ping this
                     Signal::Save(tx) => {
                         tx.send(TrackerState::from_tracker(&self)).unwrap();
                     }
+                    Signal::Report => self.report_progress(true),
                 }
             }
         });
@@ -309,7 +315,7 @@ impl ProgressTracker {
         let data = self.progress.borrow().data.clone();
         let (new, old) = data.split_at(data.len() - ack_len);
 
-        for item in old.iter() {
+        for item in old.iter().rev() {
             text.push_str(&format!("`{}` - {}\n", item.time, item.context));
         }
         if new.len() == 0 {
@@ -317,18 +323,23 @@ impl ProgressTracker {
         }
 
         text.push_str("-- _new progress below_ --\n");
-        for item in new.iter() {
+        for item in new.iter().rev() {
             text.push_str(&format!("`{}` - {}\n", item.time, item.context));
         }
         text
     }
 
-    fn report_progress(&self) {
-        if !self.is_updated() {
+    fn report_progress(&self, force: bool) {
+        if !self.is_updated() && !force {
             return;
         }
 
-        self.bot().reply_md_to((self.chat_id, self.last_msg_id.get()), self.progress_text());
+        let reply = (self.chat_id, self.last_msg_id.get());
+        let body = self.progress_text();
+
+        if let Ok(msg) = self.bot().reply_md_and_get_msg(reply, body) {
+            self.last_msg_id.set(Some(msg.message_id));
+        }
 
         self.update_ack_len();
     }
@@ -344,9 +355,9 @@ impl ProgressTracker {
     }
 
     fn report_done(&self) {
-        self.report_progress();
-        self.bot().reply_to((self.chat_id, self.last_msg_id.get()),
-      "此快遞已送達，追蹤終止 (使用 /cleanup 指令清除失效的追蹤)")
+        let msg = "此快遞已送達，追蹤終止 (使用 /cleanup 指令清除失效的追蹤)";
+        let reply = (self.chat_id, self.last_msg_id.get());
+        self.bot().reply_to(reply, msg);
     }
 }
 
