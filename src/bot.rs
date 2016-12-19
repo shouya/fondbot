@@ -16,6 +16,7 @@ impl Bot {
                                      reply_to_msg_id: Option<Integer>,
                                      txt: T,
                                      parse_mode: Option<tg::ParseMode>) {
+        let mut retry_count = 3;
         let txt = txt.into();
         while let Err(err) = self.api.send_message(chat_id, // chat id
                                                    txt.clone(), // txt
@@ -24,8 +25,11 @@ impl Bot {
                                                    reply_to_msg_id, // reply to msg id
                                                    None) {
             // reply markup (kbd)
-
-            warn!("send message failed {}, retrying", err);
+            warn!("send message failed {}, retrying {}", err, retry_count);
+            retry_count -= 1;
+            if retry_count == 0 {
+                break;
+            }
         }
     }
     pub fn reply_raw<T: Into<String>>(&self,
@@ -49,7 +53,7 @@ impl Bot {
         let mut count = 0;
         let mut last = 0;
         while let Ok(updates) = self.api.get_updates(Some(last), None, None) {
-            if updates.len() == 0 {
+            if updates.is_empty() {
                 break;
             }
             for u in updates {

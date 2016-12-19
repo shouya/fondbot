@@ -23,7 +23,7 @@ impl Context {
     pub fn save_state(&self) {
         let exts_val = self.exts.borrow().save();
         let mut file = File::create(Path::new(&self.save_to)).expect("Invalid state filename");
-        if let Err(_) = serde_json::ser::to_writer_pretty(&mut file, &exts_val) {
+        if serde_json::ser::to_writer_pretty(&mut file, &exts_val).is_err() {
             warn!("error writing context state to file");
         }
     }

@@ -23,7 +23,7 @@ enum Signal {
 type Result<T> = std::result::Result<T, String>;
 macro_rules! try_strerr {
   [ $maybe:expr ] => {
-    try!($maybe.map_err(|e| format!("{:}", e)))
+    try!($maybe.map_err(|e| format!("{:?}", e)))
   }
 }
 
@@ -184,7 +184,7 @@ impl Tracker {
     }
 
     #[allow(non_snake_case)]
-    fn query_express_provider(tracking_no: &String) -> Result<String> {
+    fn query_express_provider(tracking_no: &str) -> Result<String> {
         #[derive(Deserialize, Debug)]
         struct _Auto {
             comCode: String,
@@ -202,7 +202,7 @@ impl Tracker {
             .ok_or("Express provider not found".into())
     }
 
-    fn query_express_progress(tracking_no: &String, provider: &String) -> Result<Progress> {
+    fn query_express_progress(tracking_no: &str, provider: &str) -> Result<Progress> {
         let url = format!("{}/query?type={}&postid={}",
                           BASE_URL,
                           provider,
@@ -214,7 +214,7 @@ impl Tracker {
 
 // background worker
 impl ProgressTracker {
-    fn from_tracking_no(no: &String, msg: &tg::Message) -> Result<ProgressTracker> {
+    fn from_tracking_no(no: &str, msg: &tg::Message) -> Result<ProgressTracker> {
         let provider = try!(Tracker::query_express_provider(no));
         let progress = try!(Tracker::query_express_progress(no, &provider));
 
@@ -232,7 +232,7 @@ impl ProgressTracker {
         Timer::<Signal>::new(check_intvl, tx.clone(), Signal::Tick).tick_forever();
 
         std::thread::spawn(move || {
-            for signal in rx.into_iter() {
+            for signal in rx {
                 match signal {
                     Signal::Tick => {
                         self.update_progress();
