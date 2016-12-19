@@ -15,8 +15,8 @@ type TrackerHandle = Sender<Signal>;
 enum Signal {
     Tick, // used by the periodic timer
     Ignore, // used to test if the worker is invalidated
-    Quit, /* used to tell the worker to halt
-           * Dump(Sender<ProgressTracker>)  // used to get a copy of current worker state */
+    Quit, // used to tell the worker to halt
+    Save(Sender<TrackerState>), // used to get a copy of current worker state
 }
 
 // convert Result<T, E: Debug> to Result<T, String>
@@ -51,6 +51,14 @@ struct ProgressTracker {
     progress: RefCell<Progress>,
     last_msg_id: Cell<Option<i64>>, // message id of last progress
     ack_len: Cell<usize>, // no. of progress item acknowledged
+    chat_id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct TrackerState {
+    tracking_no: String,
+    last_msg_id: Option<i64>,
+    ack_len: usize,
     chat_id: i64,
 }
 
@@ -100,10 +108,26 @@ impl BotExtension for Tracker {
     }
 
     fn save(&self) -> JsonValue {
-        JsonValue::Null /* TODO */
+        let (tx, rx) = std::sync::mpsc::channel();
+        let mut trackers = Vec::new();
+        for (_, handle) in &self.trackers {
+            if let Ok(_) = handle.send(Signal::Save(tx.clone())) {
+                if let Ok(state) = rx.recv() {
+                    trackers.push(serde_json::to_value(state))
+                }
+            }
+        }
+        JsonValue::Array(trackers)
     }
-    fn load(&mut self, _: JsonValue) {
-        // TODO
+    fn load(&mut self, val: JsonValue) {
+        if let JsonValue::Array(arr) = val {
+            for json in arr {
+                let state = serde_json::from_value::<TrackerState>(json).unwrap();
+                let no = state.tracking_no.clone();
+                let tracker = state.into_tracker().unwrap();
+                self.trackers.insert(no, tracker.schedule());
+            }
+        }
     }
 }
 
@@ -141,27 +165,28 @@ impl Tracker {
 
     fn cleanup(&mut self) -> usize {
         let before_len = self.trackers.len();
-        let new_trackers = {
-            self.trackers
-                .iter()
-                .filter(|&(_, v)| Self::is_alive(v))
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .collect()
+        let dead_trackers: Vec<String> = {
+            let iter = self.trackers.iter();
+            let deads = iter.filter(|&(_, v)| !Self::is_alive(v));
+            deads.map(|(k, _)| k.clone()).collect()
         };
-        std::mem::replace(&mut self.trackers, new_trackers);
+
+        for no in dead_trackers {
+            self.trackers.remove(&no);
+        }
         let after_len = self.trackers.len();
         after_len - before_len
     }
 
     fn list(&mut self) -> String {
-        let mut out = String::new();
+        let mut out = format!(">>> Tracking {} items <<<\n", self.trackers.len());
         for (k, v) in &self.trackers {
             let state = if Self::is_alive(v) {
-                "[alive]"
+                "`[alive]`"
             } else {
-                "[dead ]"
+                "`[dead ]`"
             };
-            out.push_str(&format!("`{}`\t{}\n", k, state));
+            out.push_str(&format!("{}\t{}\n", state, k));
         }
         out
     }
@@ -214,21 +239,23 @@ impl Tracker {
 
 // background worker
 impl ProgressTracker {
-    fn from_tracking_no(no: &str, msg: &tg::Message) -> Result<ProgressTracker> {
+    fn from_tracking_no<T>(no: &str, reply: T) -> Result<ProgressTracker>
+        where T: Repliable
+    {
         let provider = try!(Tracker::query_express_provider(no));
         let progress = try!(Tracker::query_express_progress(no, &provider));
 
         Ok(ProgressTracker {
-            last_msg_id: Cell::new(None),
+            last_msg_id: Cell::new(reply.message_id()),
             ack_len: Cell::new(progress.data.len()),
             progress: RefCell::new(progress),
-            chat_id: msg.chat.id(),
+            chat_id: reply.chat_id(),
         })
     }
 
     fn schedule(self) -> TrackerHandle {
         let (tx, rx) = std::sync::mpsc::channel();
-        let check_intvl = 5 * 60 * 1000; // 5 min
+        let check_intvl = 10 * 1000; // 5 min
         Timer::<Signal>::new(check_intvl, tx.clone(), Signal::Tick).tick_forever();
 
         std::thread::spawn(move || {
@@ -244,8 +271,9 @@ impl ProgressTracker {
                     }
                     // Signal::Dump(tx) => unimplemented!(), // send(out, self.clone())
                     Signal::Quit => break,
-                    Signal::Ignore => {
-                        // just ignore this
+                    Signal::Ignore => {} // Just ignore this
+                    Signal::Save(tx) => {
+                        tx.send(TrackerState::from_tracker(&self)).unwrap();
                     }
                 }
             }
@@ -307,7 +335,7 @@ impl ProgressTracker {
 
     fn is_updated(&self) -> bool {
         let curr_len = self.progress.borrow().data.len();
-        curr_len == self.ack_len.get()
+        curr_len != self.ack_len.get()
     }
 
     fn update_ack_len(&self) {
@@ -319,5 +347,23 @@ impl ProgressTracker {
         self.report_progress();
         self.bot().reply_to((self.chat_id, self.last_msg_id.get()),
       "此快遞已送達，追蹤終止 (使用 /cleanup 指令清除失效的追蹤)")
+    }
+}
+
+impl TrackerState {
+    fn from_tracker(tracker: &ProgressTracker) -> Self {
+        TrackerState {
+            last_msg_id: tracker.last_msg_id.get().clone(),
+            ack_len: tracker.ack_len.get(),
+            chat_id: tracker.chat_id,
+            tracking_no: tracker.progress.borrow().nu.clone(),
+        }
+    }
+
+    fn into_tracker(self) -> Result<ProgressTracker> {
+        let builder = ProgressTracker::from_tracking_no;
+        let tracker = try!(builder(&self.tracking_no, (self.chat_id, self.last_msg_id)));
+        tracker.ack_len.set(self.ack_len);
+        Ok(tracker)
     }
 }

@@ -4,6 +4,7 @@ extern crate serde_derive;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
+extern crate dotenv;
 
 mod common;
 mod extensions;
@@ -17,7 +18,7 @@ use extensions::*;
 use ext_stack::ExtensionStack;
 
 fn process_message(ctx: &Context, msg: &tg::Message) {
-    println!("Got msg: {:?}", msg);
+    debug!("Got msg: {:?}", msg);
     let mut exts = ctx.exts.borrow_mut();
     exts.process(msg, ctx);
 }
@@ -40,10 +41,8 @@ fn serve(ctx: &mut Context) {
 
 fn main() {
     // DEBUG
-    std::env::set_var("TELEGRAM_BOT_TOKEN",
-                      "167818725:AAHoBuwE2GGU63yrApdk4q-8xYqR8ng0v7w");
-
     env_logger::init().unwrap();
+    let _ = dotenv::dotenv(); // ignore the result
 
     let bot = Bot::from_default_env();
     info!("Running as {:?}", bot.get_me());
