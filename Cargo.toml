@@ -16,4 +16,6 @@ log = "*"
 dotenv = "*"
 env_logger = "*"
 hyper = "0.9.14"
+regex = "*"
+lazy_static = "*"
 

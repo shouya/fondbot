@@ -12,6 +12,7 @@ pub trait TgApiExt {
                                  parse_mode: Option<tg::ParseMode>)
                                  -> Result<tg::Message>;
     fn consume_updates(&self) -> usize;
+    fn send_typing<T>(&self, chat: T) where T: Chattable;
 
     fn reply_and_get_msg<R, T>(&self, msg: R, txt: T) -> Result<tg::Message>
         where R: Repliable,
@@ -47,15 +48,25 @@ pub trait TgMessageExt {
     fn is_cmds(&self, prefixes: &str) -> bool;
     fn cmd_cmd(&self) -> Option<String>;
     fn cmd_arg(&self, prefix: &str) -> Option<String>;
+    fn cmd_args(&self, prefix: &str) -> Vec<String>;
+    fn clean_cmd(&mut self);
 }
 
 pub trait TgUserExt {
     fn user_name(&self) -> String;
 }
 
-pub trait Repliable {
+pub trait Chattable {
     fn chat_id(&self) -> Integer;
+}
+
+pub trait Repliable: Chattable {
     fn message_id(&self) -> Option<Integer>;
+}
+
+
+pub fn bot() -> Bot {
+    Bot::from_default_env()
 }
 
 /// ///////////////// implementing the extensions  ////////////////////
@@ -108,9 +119,15 @@ impl TgApiExt for tg::Api {
         }
         count
     }
+
+    fn send_typing<T>(&self, chat: T)
+        where T: Chattable
+    {
+        self.send_chat_action(chat.chat_id(), tg::ChatAction::Typing).o();
+    }
 }
 
-impl<'a> TgMessageExt for &'a tg::Message {
+impl<'a> TgMessageExt for tg::Message {
     fn msg_txt(&self) -> Option<String> {
         if let tg::MessageType::Text(ref txt) = self.msg {
             Some(txt.clone().into())
@@ -173,6 +190,25 @@ impl<'a> TgMessageExt for &'a tg::Message {
             Some(b.to_string())
         }
     }
+    fn cmd_args(&self, prefix: &str) -> Vec<String> {
+        if let Some(arg_str) = self.cmd_arg(prefix) {
+            arg_str.as_str().split_whitespace().map(String::from).collect()
+        } else {
+            Vec::new()
+        }
+    }
+
+    fn clean_cmd(&mut self) {
+        let msg = &mut self.msg;
+        if let &mut tg::MessageType::Text(ref mut txt) = msg {
+            lazy_static! {
+                static ref RE: Regex = Regex::new(r"^(?P<cmd>/\w+)@\w+bot").unwrap();
+            }
+            let new_txt = RE.replace(txt, "$cmd");
+            warn!("Before: {}, after: {}", txt, new_txt);
+            *txt = new_txt;
+        }
+    }
 }
 
 impl TgUserExt for tg::User {
@@ -186,29 +222,45 @@ impl TgUserExt for tg::User {
     }
 }
 
-impl<'a> Repliable for &'a tg::Message {
+
+impl<'a> Chattable for &'a tg::Message {
     fn chat_id(&self) -> Integer {
         self.chat.id()
     }
+}
+
+impl<'a> Repliable for &'a tg::Message {
     fn message_id(&self) -> Option<Integer> {
         Some(self.message_id)
     }
 }
 
-impl Repliable for (Integer, Integer) {
+impl Chattable for (Integer, Integer) {
     fn chat_id(&self) -> Integer {
         self.0
     }
+}
+
+impl Repliable for (Integer, Integer) {
     fn message_id(&self) -> Option<Integer> {
         Some(self.1)
     }
 }
 
-impl Repliable for (Integer, Option<Integer>) {
+impl Chattable for (Integer, Option<Integer>) {
     fn chat_id(&self) -> Integer {
         self.0
     }
+}
+
+impl Repliable for (Integer, Option<Integer>) {
     fn message_id(&self) -> Option<Integer> {
         self.1
+    }
+}
+
+impl Chattable for Integer {
+    fn chat_id(&self) -> Integer {
+        *self
     }
 }

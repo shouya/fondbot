@@ -5,6 +5,8 @@ extern crate serde_derive;
 extern crate log;
 extern crate env_logger;
 extern crate dotenv;
+#[macro_use]
+extern crate lazy_static;
 
 mod common;
 mod extensions;
@@ -30,7 +32,8 @@ fn serve(ctx: &mut Context) {
     };
 
     listener.listen(move |u| {
-            if let Some(msg) = u.message {
+            if let Some(mut msg) = u.message {
+                msg.clean_cmd();
                 process_message(ctx, &msg);
             }
             info!("saving state");
@@ -56,6 +59,7 @@ fn main() {
 
         exts.plug(afk::Afk::new());
         exts.plug(tracker::Tracker::new());
+        exts.plug(weather::Weather::new());
 
         Context::new(bot, exts, "state.json".into())
     };

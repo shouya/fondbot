@@ -1,12 +1,7 @@
-extern crate hyper;
-
 use std;
 use common::*;
 
-use self::hyper::Client;
-use self::hyper::client::IntoUrl;
-use self::hyper::header::UserAgent;
-use serde_json::de::from_reader;
+use std::time::Duration;
 
 type TrackerHandle = Sender<Signal>;
 
@@ -113,7 +108,7 @@ impl BotExtension for Tracker {
         let mut trackers = Vec::new();
         for (_, handle) in &self.trackers {
             if let Ok(_) = handle.send(Signal::Save(tx.clone())) {
-                if let Ok(state) = rx.recv() {
+                if let Ok(state) = rx.recv_timeout(Duration::from_millis(300)) {
                     trackers.push(serde_json::to_value(state))
                 }
             }
@@ -133,9 +128,7 @@ impl BotExtension for Tracker {
 }
 
 const BASE_URL: &'static str = "https://www.kuaidi100.com";
-const USER_AGENT: &'static str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) \
-                                  AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.98 \
-                                  Safari/537.36";
+
 
 impl Tracker {
     fn track(&mut self, tracking_no: String, msg: &tg::Message) {
@@ -180,7 +173,7 @@ impl Tracker {
             self.trackers.remove(&no);
         }
         let after_len = self.trackers.len();
-        after_len - before_len
+        before_len - after_len
     }
 
     fn list(&mut self) -> String {
@@ -200,19 +193,6 @@ impl Tracker {
         th.send(Signal::Ping).is_ok()
     }
 
-    fn request<URL: IntoUrl, T: Deserialize>(url: URL) -> Result<T> {
-        let url = url.into_url().unwrap();
-        let resp = try_strerr!(Client::new()
-            .get(url.clone())
-            .header(UserAgent(USER_AGENT.into()))
-            .send());
-        if !resp.status.is_success() {
-            return Err(format!("Failed requesting url: {}", url.as_str()));
-        }
-
-        Ok(try_strerr!(from_reader(resp)))
-    }
-
     #[allow(non_snake_case)]
     fn query_express_provider(tracking_no: &str) -> Result<String> {
         #[derive(Deserialize, Debug)]
@@ -225,7 +205,7 @@ impl Tracker {
         }
 
         let url = format!("{}/autonumber/autoComNum?text={}", BASE_URL, tracking_no);
-        let result: _AutoComNum = try_strerr!(Self::request(&url));
+        let result: _AutoComNum = try_strerr!(request(&url));
         result.auto
             .first()
             .and_then(|x| Some(x.comCode.clone()))
@@ -237,7 +217,7 @@ impl Tracker {
                           BASE_URL,
                           provider,
                           tracking_no);
-        Ok(try_strerr!(Self::request(&url)))
+        Ok(try_strerr!(request(&url)))
     }
 }
 
@@ -260,9 +240,10 @@ impl ProgressTracker {
 
     fn schedule(self) -> TrackerHandle {
         let (tx, rx) = std::sync::mpsc::channel();
-        let check_intvl = 10 * 1000; // 5 min
+        let check_intvl = 5 * 60 * 1000; // 5 min
         Timer::<Signal>::new(check_intvl, tx.clone(), Signal::Tick).tick_forever();
 
+        let owntx = tx.clone();
         std::thread::spawn(move || {
             for signal in rx {
                 match signal {
@@ -272,7 +253,7 @@ impl ProgressTracker {
 
                         if self.done() {
                             self.report_done();
-                            break;
+                            owntx.send(Signal::Quit).unwrap();
                         }
                     }
                     Signal::Quit => break,

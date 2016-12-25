@@ -4,12 +4,15 @@ pub extern crate telegram_bot;
 pub extern crate serde;
 pub extern crate serde_json;
 pub extern crate erased_serde;
+pub extern crate regex;
 
 pub use serde_json::Value as JsonValue;
 pub use serde::de::Deserialize;
 pub use serde::ser::Serialize;
+pub use regex::Regex;
 
 use std;
+pub use std::fmt;
 pub use std::sync::mpsc::{Sender, Receiver};
 pub use std::cell::{Cell, RefCell};
 
@@ -30,8 +33,9 @@ pub trait BotExtension {
         false
     }
     fn process(&mut self, msg: &tg::Message, ctx: &Context);
-    /// Report current status
     fn name(&self) -> &str;
+
+    /// Report current status
     fn report(&self) -> String {
         self.name().into()
     }

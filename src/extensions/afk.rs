@@ -59,21 +59,25 @@ impl Afk {
 
     #[allow(unused_must_use)]
     fn format_duration(d: &Duration) -> String {
-        use std::fmt::Write;
-        let mut str = String::new();
+        let mut str = Vec::new();
+        let mut d = d.clone();
         if d.num_days() >= 1 {
-            write!(&mut str, "{} days", d.num_days());
+            str.push(format!("{} days", d.num_days()));
+            d = d - Duration::days(d.num_days());
         }
         if d.num_hours() >= 1 {
-            write!(&mut str, "{} hours", d.num_hours());
+            str.push(format!("{} hours", d.num_hours()));
+            d = d - Duration::hours(d.num_hours());
         }
         if d.num_minutes() >= 1 {
-            write!(&mut str, "{} mins", d.num_minutes());
+            str.push(format!("{} mins", d.num_minutes()));
+            d = d - Duration::minutes(d.num_minutes());
         }
         if d.num_seconds() >= 1 {
-            write!(&mut str, "{} secs", d.num_seconds());
+            str.push(format!("{} secs", d.num_seconds()));
         }
-        str
+
+        str.join(" ")
     }
 
     fn format_time<TZ: TimeZone>(t: &DateTime<TZ>) -> String {
@@ -111,6 +115,7 @@ impl BotExtension for Afk {
 
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
         if msg.is_cmd("afk") {
+            ctx.bot.reply_md_to(msg, "[track](/track 123)");
             self.set_afk(msg);
             ctx.bot.reply_to(msg, "Afk set");
             return;
