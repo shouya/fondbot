@@ -69,12 +69,22 @@ impl Weather {
     }
 }
 
+#[derive(Deserialize, PartialEq, PartialOrd)]
+struct _CaiyunResultValue<T> {
+    value: T,
+}
+
+#[derive(Deserialize)]
+struct _CaiyunResultHourly {
+    skycon: Vec<_CaiyunResultValue<String>>,
+    humidity: Vec<_CaiyunResultValue<f32>>,
+    aqi: Vec<_CaiyunResultValue<i32>>,
+    temperature: Vec<_CaiyunResultValue<i32>>,
+}
+
 #[derive(Deserialize)]
 struct _CaiyunResult {
-    temperature: f32,
-    skycon: String,
-    aqi: i32,
-    humidity: f32,
+    hourly: _CaiyunResultHourly,
 }
 #[derive(Deserialize)]
 struct Caiyun {
@@ -85,57 +95,143 @@ const CAIYUN_API_BASE: &'static str = "https://api.caiyunapp.com/v2";
 
 impl fmt::Display for Caiyun {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let temp = self.result.temperature.round();
-        write!(f, "*Weather*: {}℃, ️{}\n", temp, self.fmt_skycon()).omit();
-        write!(f, "*Humidity*: {:.2}%\n", self.result.humidity * 100.0).omit();
-        write!(f, "*AQI*: {}, {}\n", self.result.aqi, self.aqi_level()).omit();
+        let data = &self.result.hourly;
+        let (temp_lo, temp_hi, temp_curr) = lo_hi_curr(&data.temperature).unwrap();
+        let (hmd_lo, hmd_hi, _) = lo_hi_curr(&data.humidity).unwrap();
+        let skycon = self.compress_skycon();
+
+        write!(f, "*Conditions*: {}\n", skycon).omit();
+
+        write!(f,
+               "*Weather*: {}℃ ({}-{}℃)\n",
+               temp_curr,
+               temp_lo,
+               temp_hi)
+            .omit();
+
+        write!(f,
+               "*Humidity*: {:.2}-{:.2}%\n",
+               hmd_lo * 100.0,
+               hmd_hi * 100.0)
+            .omit();
+        write!(f, "*AQI*: {}", self.fmt_aqi()).omit();
+
         Ok(())
     }
 }
+
 impl WeatherProvider for Caiyun {
     fn from_query(_: &str, long_lat: Option<&str>) -> Result<Self> {
         let long_lat = long_lat.unwrap();
         let api_key = std::env::var("CAIYUN_API_KEY").unwrap();
-        let url = format!("{}/{}/{}/realtime.json", CAIYUN_API_BASE, api_key, long_lat);
+        let url = format!("{}/{}/{}/forecast.json", CAIYUN_API_BASE, api_key, long_lat);
+        let mut weather_data: Caiyun = try!(request(&url));
 
-        Ok(try!(request(&url)))
+        weather_data.truncate_result();
+
+        Ok(weather_data)
     }
 }
+
 impl Caiyun {
-    fn fmt_skycon(&self) -> String {
-        let skycon = match self.result.skycon.as_str() {
-            "CLEAR_DAY" => "☀️",
-            "CLEAR_NIGHT" => "☀️🌙",
-            "PARTLY_CLOUDY_DAY" => "⛅️",
-            "PARTLY_CLOUDY_NIGHT" => "⛅️🌙",
-            "CLOUDY" => "☁️",
-            "RAIN" => "☔️",
-            "SNOW" => "☃",
-            "WIND" => "🌬",
-            "FOG" => "🌫",
-            "HAZE" => "🌫☠",
-            "SLEET" => "🌧❄️",
-            _ => self.result.skycon.as_str(),
-        };
-        skycon.into()
+    // Only keep data for 1 day
+    fn truncate_result(&mut self) {
+        let hourly = &mut self.result.hourly;
+        hourly.aqi.truncate(24);
+        hourly.humidity.truncate(24);
+        hourly.skycon.truncate(24);
+        hourly.temperature.truncate(24);
     }
 
-    fn aqi_level(&self) -> &'static str {
-        let aqi = self.result.aqi;
-        if 0 <= aqi && aqi < 50 {
-            "Good"
-        } else if 51 <= aqi && aqi < 100 {
-            "Moderate"
-        } else if 101 <= aqi && aqi < 150 {
-            "Unhealthy for sensitive groups"
-        } else if 151 <= aqi && aqi < 200 {
-            "Unhealthy"
-        } else if 201 <= aqi && aqi < 300 {
-            "Very unhealthy"
-        } else if 300 <= aqi && aqi < 1000 {
-            "Hazardous"
-        } else {
-            "Meter exploded"
+    fn compress_skycon(&self) -> String {
+        let skycon = &self.result.hourly.skycon;
+        let mut last = String::new();
+        let mut compressed = Vec::new();
+
+        for curr in skycon.iter() {
+            let val = &curr.value;
+            if last != *val {
+                compressed.push(fmt_skycon(&val));
+                last = val.clone();
+            }
         }
+
+        compressed.join("→")
+    }
+
+    fn fmt_aqi(&self) -> String {
+        let data = &self.result.hourly;
+        let (aqi_lo, aqi_hi, aqi_curr) = lo_hi_curr(&data.aqi).unwrap();
+        if aqi_lo == 10 && aqi_hi == 10 && aqi_curr == 10 {
+            return "<not available>".into();
+        }
+        format!("*AQI*: {}, {} ({}-{})\n",
+                aqi_curr,
+                aqi_level(aqi_curr),
+                aqi_lo,
+                aqi_hi)
+    }
+}
+
+fn aqi_level(aqi: i32) -> &'static str {
+    if 0 <= aqi && aqi < 50 {
+        "Good"
+    } else if 51 <= aqi && aqi < 100 {
+        "Moderate"
+    } else if 101 <= aqi && aqi < 150 {
+        "Unhealthy for sensitive groups"
+    } else if 151 <= aqi && aqi < 200 {
+        "Unhealthy"
+    } else if 201 <= aqi && aqi < 300 {
+        "Very unhealthy"
+    } else if 300 <= aqi && aqi < 1000 {
+        "Hazardous"
+    } else {
+        "Meter exploded"
+    }
+}
+
+fn lo_hi_curr<T>(vec: &Vec<_CaiyunResultValue<T>>) -> Result<(T, T, T)>
+    where _CaiyunResultValue<T>: Ord,
+          T: Copy
+{
+    if vec.is_empty() {
+        return Err("lo_hi_curr got empty vector".into());
+    }
+
+    let curr = vec.first().unwrap().value;
+    let lo = vec.iter().min().unwrap().value;
+    let hi = vec.iter().max().unwrap().value;
+
+    Ok((lo, hi, curr))
+}
+
+
+fn fmt_skycon(skycon: &String) -> String {
+    let skycon_fmted = match skycon.as_str() {
+        "CLEAR_DAY" => "☀️",
+        "CLEAR_NIGHT" => "☀️🌙",
+        "PARTLY_CLOUDY_DAY" => "⛅️",
+        "PARTLY_CLOUDY_NIGHT" => "⛅️🌙",
+        "CLOUDY" => "☁️",
+        "RAIN" => "☔️",
+        "SNOW" => "☃",
+        "WIND" => "🌬",
+        "FOG" => "🌫",
+        "HAZE" => "🌫☠",
+        "SLEET" => "🌧❄️",
+        _ => skycon.as_str(),
+    };
+    skycon_fmted.into()
+}
+
+// Why not derive? because f32 does not implement Ord
+use std::cmp::{Ord, PartialOrd, Eq, Ordering};
+impl<T> Eq for _CaiyunResultValue<T> where T: PartialEq {}
+impl<T> Ord for _CaiyunResultValue<T>
+    where _CaiyunResultValue<T>: PartialOrd + Eq
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap_or(Ordering::Equal)
     }
 }
