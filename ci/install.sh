@@ -53,8 +53,6 @@ main() {
     install_rustup
     install_standard_crates
     configure_cargo
-
-    # TODO if you need to install extra stuff add it here
 }
 
 main

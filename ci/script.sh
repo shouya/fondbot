@@ -4,10 +4,6 @@ set -ex
 
 . $(dirname $0)/utils.sh
 
-# TODO modify this function as you see fit
-# PROTIP Always pass `--target $TARGET` to cargo commands, this makes cargo output build artifacts
-# to target/$TARGET/{debug,release} which can reduce the number of needed conditionals in the
-# `before_deploy`/packaging phase
 run_test_suite() {
     case $TARGET in
         # configure emulation for transparent execution of foreign binaries
@@ -27,11 +23,11 @@ run_test_suite() {
     fi
 
     cargo build --target $TARGET --verbose
-    cargo run --target $TARGET
-    cargo test --target $TARGET
+#    cargo run --target $TARGET
+#    cargo test --target $TARGET
 
     # sanity check the file type
-    file target/$TARGET/debug/hello
+    file target/$TARGET/debug/fondbot
 }
 
 main() {
