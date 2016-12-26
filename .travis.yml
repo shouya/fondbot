@@ -84,7 +84,7 @@ deploy:
   # deploy when a new tag is pushed
   on:
     # channel to use to produce the release artifacts
-    condition: $TRAVIS_RUST_VERSION = nightly
+    # condition: $TRAVIS_RUST_VERSION = nightly
     tags: true
 
 branches:
