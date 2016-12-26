@@ -24,6 +24,7 @@ matrix:
         apt:
           packages:
             - gcc-multilib
+            - openssl-dev
     - os: linux
       rust: nightly
       env: TARGET=i686-unknown-linux-musl
