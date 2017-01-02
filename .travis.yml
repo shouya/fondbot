@@ -5,9 +5,6 @@ env:
   global:
     # This will be part of the release tarball
     - PROJECT_NAME=fondbot
-    - MAKE_DEB=yes
-    - DEB_MAINTAINER="Shou Ya <shouyatf@gmail.com>"
-    - DEB_DESCRIPTION="Tiny telegram bot written in Rust"
 
 # AFAICT There are a few ways to set up the build jobs. This one is not the DRYest but I feel is the
 # easiest to reason about.

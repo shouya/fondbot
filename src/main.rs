@@ -1,9 +1,12 @@
 #![feature(proc_macro)]
+#![feature(custom_attribute)]
 #[macro_use]
 extern crate serde_derive;
+#[macro_use(o, slog_log, slog_trace, slog_debug, slog_info, slog_warn, slog_error)]
+extern crate slog;
 #[macro_use]
-extern crate log;
-extern crate env_logger;
+extern crate slog_scope;
+extern crate slog_term;
 extern crate dotenv;
 #[macro_use]
 extern crate lazy_static;
@@ -45,7 +48,10 @@ fn serve(ctx: &mut Context) {
 
 fn main() {
     // DEBUG
-    env_logger::init().unwrap();
+    use slog::DrainExt;
+    let drain = slog_term::streamer().build().fuse();
+    let root_logger = slog::Logger::root(drain, o![]);
+    slog_scope::set_global_logger(root_logger);
     let _ = dotenv::dotenv(); // ignore the result
 
     let bot = Bot::from_default_env();

@@ -94,6 +94,8 @@ struct Caiyun {
 const CAIYUN_API_BASE: &'static str = "https://api.caiyunapp.com/v2";
 
 impl fmt::Display for Caiyun {
+    #[allow(unused_attributes)]
+    #[rustfmt_skip]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let data = &self.result.hourly;
         let (temp_lo, temp_hi, temp_curr) = lo_hi_curr(&data.temperature).unwrap();
@@ -101,19 +103,8 @@ impl fmt::Display for Caiyun {
         let skycon = self.compress_skycon();
 
         write!(f, "*Conditions*: {}\n", skycon).omit();
-
-        write!(f,
-               "*Weather*: {}℃ ({}-{}℃)\n",
-               temp_curr,
-               temp_lo,
-               temp_hi)
-            .omit();
-
-        write!(f,
-               "*Humidity*: {:.2}-{:.2}%\n",
-               hmd_lo * 100.0,
-               hmd_hi * 100.0)
-            .omit();
+        write!(f, "*Weather*: {}℃ ({}-{}℃)\n", temp_curr, temp_lo, temp_hi).omit();
+        write!(f, "*Humidity*: {:.2}-{:.2}%\n", hmd_lo * 100.0, hmd_hi * 100.0).omit();
         write!(f, "*AQI*: {}", self.fmt_aqi()).omit();
 
         Ok(())
