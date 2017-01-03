@@ -35,7 +35,7 @@ impl TgDrain {
         self.api
             .send_message(chat_id,
                           text,
-                          Some(telegram_bot::ParseMode::Markdown),
+                          Some(telegram_bot::ParseMode::Html),
                           Some(true),
                           None,
                           None)
@@ -44,7 +44,7 @@ impl TgDrain {
 }
 
 fn format_log(info: &Record, _: &OwnedKeyValueList) -> String {
-    format!("`[{}] {}{}: ` {}",
+    format!("<code>[{}]{}{}:</code> {}",
             info.level().as_short_str(),
             info.module(),
             info.function(),

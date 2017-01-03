@@ -17,6 +17,14 @@ env_logger = "*"
 hyper = "0.9.14"
 regex = "*"
 lazy_static = "*"
-slog = "*"
+slog = { version = "*", features = ["max_level_trace"] }
 slog-scope = "*"
+slog-extra = "*"
 slog-term = "*"
+
+[dependencies.clippy]
+optional = true
+version = "*"
+
+[features]
+lint = ["clippy"]

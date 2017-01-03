@@ -47,13 +47,15 @@ fn serve(ctx: &mut Context) {
 }
 
 fn setup_logger() {
-    use slog::DrainExt;
+    use slog::{DrainExt, Level, LevelFilter};
     let api_token = std::env::var("TELEGRAM_BOT_TOKEN").unwrap();
     let log_channel = std::env::var("TELEGRAM_LOG_CHANNEL").unwrap().parse::<i64>().unwrap();
     let tg_drain = tg_logger::TgDrain::new(&api_token, log_channel);
+    let tg_drain_filtered = LevelFilter::new(tg_drain, Level::Warning);
+
     let term_drain = slog_term::streamer().build().fuse();
-    let dup_drain = slog::Duplicate::new(tg_drain, term_drain).ignore_err();
-    let root_logger = slog::Logger::root(dup_drain, o![]);
+    let dup_drain = slog::Duplicate::new(tg_drain_filtered, term_drain);
+    let root_logger = slog::Logger::root(dup_drain.ignore_err(), o![]);
     slog_scope::set_global_logger(root_logger);
 }
 
