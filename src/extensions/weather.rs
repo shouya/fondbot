@@ -61,8 +61,8 @@ impl Weather {
             bot().send_typing(msg);
             let mut out = format!("=== Weather Report for {} ===\n", city);
             match Caiyun::from_query(&city, Some(&long_lat)) {
-                Ok(w) => write!(out, "{}\n", w).omit(),
-                Err(e) => write!(out, "Error: {}\n", e).omit(),
+                Ok(w) => write!(out, "{}\n", w).ok(),
+                Err(e) => write!(out, "Error: {}\n", e).ok(),
             };
             bot().reply_md_to(msg, out);
         }
@@ -102,10 +102,10 @@ impl fmt::Display for Caiyun {
         let (hmd_lo, hmd_hi, _) = lo_hi_curr(&data.humidity).unwrap();
         let skycon = self.compress_skycon();
 
-        write!(f, "*Conditions*: {}\n", skycon).omit();
-        write!(f, "*Weather*: {}℃ ({}-{}℃)\n", temp_curr, temp_lo, temp_hi).omit();
-        write!(f, "*Humidity*: {:.2}-{:.2}%\n", hmd_lo * 100.0, hmd_hi * 100.0).omit();
-        write!(f, "*AQI*: {}", self.fmt_aqi()).omit();
+        write!(f, "*Conditions*: {}\n", skycon).ok();
+        write!(f, "*Weather*: {}℃ ({}-{}℃)\n", temp_curr, temp_lo, temp_hi).ok();
+        write!(f, "*Humidity*: {:.2}-{:.2}%\n", hmd_lo * 100.0, hmd_hi * 100.0).ok();
+        write!(f, "*AQI*: {}", self.fmt_aqi()).ok();
 
         Ok(())
     }

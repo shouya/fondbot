@@ -144,7 +144,7 @@ impl Tracker {
     }
     fn untrack(&mut self, tracking_no: &String) {
         match self.trackers.get(tracking_no) {
-            Some(handle) => handle.send(Signal::Quit).omit(),
+            Some(handle) => handle.send(Signal::Quit).ok(),
             None => {
                 warn!("Tracker is not active");
                 return;
@@ -154,7 +154,7 @@ impl Tracker {
     }
     fn query(&self, tracking_no: String) {
         match self.trackers.get(&tracking_no) {
-            Some(handle) => handle.send(Signal::Report).omit(),
+            Some(handle) => handle.send(Signal::Report).ok(),
             None => {
                 warn!("Trying to query invalid tracker");
                 return;

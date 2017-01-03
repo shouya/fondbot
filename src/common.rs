@@ -23,7 +23,6 @@ pub use context::Context;
 pub use self::telegram_bot as tg;
 pub use self::tg::Listener;
 pub use services::*;
-pub use utils::*;
 
 #[allow(unused_variables)]
 pub trait BotExtension {

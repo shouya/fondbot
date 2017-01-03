@@ -31,14 +31,14 @@ pub trait TgApiExt {
         where R: Repliable,
               T: Into<String>
     {
-        self.send_raw(msg.chat_id(), msg.message_id(), txt, None).omit();
+        self.send_raw(msg.chat_id(), msg.message_id(), txt, None).ok();
     }
     fn reply_md_to<R, T>(&self, msg: R, md_txt: T)
         where R: Repliable,
               T: Into<String>
     {
         let markdown = Some(tg::ParseMode::Markdown);
-        self.send_raw(msg.chat_id(), msg.message_id(), md_txt, markdown).omit();
+        self.send_raw(msg.chat_id(), msg.message_id(), md_txt, markdown).ok();
     }
 }
 
@@ -123,7 +123,7 @@ impl TgApiExt for tg::Api {
     fn send_typing<T>(&self, chat: T)
         where T: Chattable
     {
-        self.send_chat_action(chat.chat_id(), tg::ChatAction::Typing).o();
+        self.send_chat_action(chat.chat_id(), tg::ChatAction::Typing).ok();
     }
 }
 

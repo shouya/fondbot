@@ -17,14 +17,13 @@ mod ext_stack;
 mod context;
 mod bot;
 mod services;
-mod utils;
+mod tg_logger;
 
 use common::*;
 use extensions::*;
 use ext_stack::ExtensionStack;
 
 fn process_message(ctx: &Context, msg: &tg::Message) {
-    debug!("Got msg: {:?}", msg);
     let mut exts = ctx.exts.borrow_mut();
     exts.process(msg, ctx);
 }
@@ -35,6 +34,7 @@ fn serve(ctx: &mut Context) {
     };
 
     listener.listen(move |u| {
+            info!("Got msg: {:?}", u);
             if let Some(mut msg) = u.message {
                 msg.clean_cmd();
                 process_message(ctx, &msg);
@@ -46,13 +46,22 @@ fn serve(ctx: &mut Context) {
         .unwrap();
 }
 
+fn setup_logger() {
+    use slog::DrainExt;
+    let api_token = std::env::var("TELEGRAM_BOT_TOKEN").unwrap();
+    let log_channel = std::env::var("TELEGRAM_LOG_CHANNEL").unwrap().parse::<i64>().unwrap();
+    let tg_drain = tg_logger::TgDrain::new(&api_token, log_channel);
+    let term_drain = slog_term::streamer().build().fuse();
+    let dup_drain = slog::Duplicate::new(tg_drain, term_drain).ignore_err();
+    let root_logger = slog::Logger::root(dup_drain, o![]);
+    slog_scope::set_global_logger(root_logger);
+}
+
 fn main() {
     // DEBUG
-    use slog::DrainExt;
-    let drain = slog_term::streamer().build().fuse();
-    let root_logger = slog::Logger::root(drain, o![]);
-    slog_scope::set_global_logger(root_logger);
-    let _ = dotenv::dotenv(); // ignore the result
+    dotenv::dotenv().ok();
+
+    setup_logger();
 
     let bot = Bot::from_default_env();
     info!("Running as {:?}", bot.get_me());
