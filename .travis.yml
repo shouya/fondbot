@@ -41,7 +41,7 @@ script:
   - file target/$TARGET/debug/$PROJECT
 
 before_deploy:
-  - cargo build --release $TARGET
+  - cargo build --target $TARGET --release
   - file target/$TARGET/release/$PROJECT
   - tar cJf $PROJECT-$TARGET-$TRAVIS_COMMIT.tar.xz target/$TARGET/release/$PROJECT
 
