@@ -204,9 +204,13 @@ impl<'a> TgMessageExt for tg::Message {
             lazy_static! {
                 static ref RE: Regex = Regex::new(r"^(?P<cmd>/\w+)@\w+bot").unwrap();
             }
-            let new_txt = RE.replace(txt, "$cmd").clone();
-            warn!("Before: {}, after: {}", txt, new_txt);
-            *txt = new_txt;
+
+            let old_txt = txt.clone();
+            *txt = {
+                let new_txt = RE.replace(&old_txt, "$cmd");
+                warn!("Before: {}, after: {}", txt, new_txt);
+                new_txt.into_owned()
+            }
         }
     }
 }
