@@ -115,7 +115,6 @@ impl BotExtension for Afk {
 
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
         if msg.is_cmd("afk") {
-            ctx.bot.reply_md_to(msg, "[track](/track 123)");
             self.set_afk(msg);
             ctx.bot.reply_to(msg, "Afk set");
             return;
