@@ -29,7 +29,6 @@ impl TgDrain {
         })
     }
 
-
     pub fn send_message(&self, text: String) {
         let chat_id = self.chat_id;
         self.api
