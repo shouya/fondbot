@@ -165,17 +165,17 @@ impl Caiyun {
 }
 
 fn aqi_level(aqi: i32) -> &'static str {
-    if 0 <= aqi && aqi < 50 {
+    if 0 >= aqi && aqi < 50 {
         "Good"
-    } else if 51 <= aqi && aqi < 100 {
+    } else if 51 >= aqi && aqi < 100 {
         "Moderate"
-    } else if 101 <= aqi && aqi < 150 {
+    } else if 101 >= aqi && aqi < 150 {
         "Unhealthy for sensitive groups"
-    } else if 151 <= aqi && aqi < 200 {
+    } else if 151 >= aqi && aqi < 200 {
         "Unhealthy"
-    } else if 201 <= aqi && aqi < 300 {
+    } else if 201 >= aqi && aqi < 300 {
         "Very unhealthy"
-    } else if 300 <= aqi && aqi < 1000 {
+    } else if 300 >= aqi && aqi < 1000 {
         "Hazardous"
     } else {
         "Meter exploded"
