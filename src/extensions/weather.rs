@@ -104,7 +104,7 @@ impl fmt::Display for Caiyun {
 
         write!(f, "*Conditions*: {}\n", skycon).ok();
         write!(f, "*Weather*: {}℃ ({}-{}℃)\n", temp_curr, temp_lo, temp_hi).ok();
-        write!(f, "*Humidity*: {:.2}-{:.2}%\n", hmd_lo * 100.0, hmd_hi * 100.0).ok();
+        write!(f, "*Humidity*: {:}-{:}%\n", hmd_lo * 100.0, hmd_hi * 100.0).ok();
         write!(f, "*AQI*: {}", self.fmt_aqi()).ok();
 
         Ok(())
@@ -156,7 +156,7 @@ impl Caiyun {
         if aqi_lo == 10 && aqi_hi == 10 && aqi_curr == 10 {
             return "<not available>".into();
         }
-        format!("*AQI*: {}, {} ({}-{})\n",
+        format!("{}, {} ({}-{})\n",
                 aqi_curr,
                 aqi_level(aqi_curr),
                 aqi_lo,

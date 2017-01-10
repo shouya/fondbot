@@ -29,22 +29,14 @@ impl Context {
     }
 
     pub fn load_state(&mut self) {
-        // TODO: enhance bPath::new(&file))oilerplate
-        match File::open(Path::new(&self.save_to)) {
-            Ok(f) => {
-                match serde_json::de::from_reader(f) {
-                    Ok(json) => {
-                        self.exts.borrow_mut().load(json);
-                        info!("State loaded from json");
-                    }
-                    Err(_) => {
-                        info!("Invalid state json");
-                    }
-                }
-            }
-            Err(_) => {
-                info!("Invalid state json");
-            }
-        }
+        File::open(Path::new(&self.save_to))
+            .map_err(|e| e.to_string())
+            .and_then(|f| serde_json::de::from_reader(f).map_err(|e| e.to_string()))
+            .map(|json| {
+                self.exts.borrow_mut().load(json);
+                info!("State loaded from json");
+            })
+            .map_err(|e| info!("Invalid state json: {}", e))
+            .ok();
     }
 }

@@ -206,11 +206,7 @@ impl<'a> TgMessageExt for tg::Message {
             }
 
             let old_txt = txt.clone();
-            *txt = {
-                let new_txt = RE.replace(&old_txt, "$cmd");
-                warn!("Before: {}, after: {}", txt, new_txt);
-                new_txt.into_owned()
-            }
+            *txt = RE.replace(&old_txt, "$cmd").into_owned()
         }
     }
 }
