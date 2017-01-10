@@ -43,14 +43,16 @@ script:
 before_deploy:
   - cargo build --target $TARGET --release
   - file target/$TARGET/release/$PROJECT
-  - tar cJf $PROJECT-$TARGET-$TRAVIS_COMMIT.tar.xz target/$TARGET/release/$PROJECT
+  - pushd target/$TARGET/release
+  - tar cJf $PROJECT-$TARGET.tar.xz $PROJECT
+  - popd
 
 deploy:
   provider: releases
   api_key:
     secure: P/v9YzGb8iMutd2ZWnXQi0+rqnBLgvW6jnXkeEqlOcPHffx9i0GWSoXzEhFqyI5rXXGxJQZbEkKAYW6WERSadruiLeC5APwWTvUf97xAIe6yJZtLLm99FyOKO1sA6FIjQ4bHMT9q2dPqawSg2fW75ZvDx6Pig8ajfmdBNHbl3JzJz1itLwhJRjfgMNWgzJSg/rIdLiEPAB/aP03hsjTlgRkUKTvo6/4ER5ElhkvzUbXZmiCRFdD8yfPwm2j6IR35731dSVcgvYpGwyQylrt9ZBbirdxYbjWMyVocm3/o6Va2uXqe9cm8PQLc2gI4z+l/ZaKfmiCfZjlCkMr0SmrNVssBbTk/rWLnA8AlFNuI1nMoebaVdzV51gFZJabXDUJZ8SOzfCktq+rJMPoq+nAqr+HKqEe/9B3LI84/U2atnfnwE+USHqfMBl4PpgSxbXKydlGIPqvb9TXYG49Y7kJkNK2zHABe8IEXD4FJZJIx75qQgkB87JdTAmIFsrkNZBFxlTztgOr0I9oVNnX4oJL0PtOUmxq8HQTHIiMaGir2aLTDLEkNN1MbRxmu1/rZDDIjhjfCaPTZVzXnK97BxUXR5PmzgR0UMc0rPEXSBcEuT47Dwob1ri3VaOUWvmDSVKE8q+DbSBXM3AZpsfS+OH8CPQQfd+HZrJ4jaaQyY0B+IWU=
-  file_glob: true
-  file: $PROJECT-$TARGET*.tar.xz
+  file_glob: false
+  file: $PROJECT-$TARGET.tar.xz
   # don't delete the artifacts from previous phases
   skip_cleanup: true
 
