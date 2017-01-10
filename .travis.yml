@@ -30,22 +30,25 @@ before_install:
   - export PATH="$PATH:$HOME/.cargo/bin"
 
 install:
-  - rustc -V
-  - cargo -V
+  - sh ~/rust/lib/rustlib/uninstall.sh
+  - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=nightly-$TARGET
   - rustup toolchain install nightly-$TARGET
   - rustup default nightly
+  - rustc -V
+  - cargo -V
 
 script:
   - cargo build --target $TARGET --verbose
-  - cargo test $TARGET --verbose
+  - cargo test --target $TARGET --verbose
   - file target/$TARGET/debug/$PROJECT
 
 before_deploy:
   - cargo build --target $TARGET --release
   - file target/$TARGET/release/$PROJECT
   - pushd target/$TARGET/release
-  - tar cJf ../../../$PROJECT-$TARGET.tar.xz $PROJECT
+  - tar cJf $PROJECT-$TARGET.tar.xz $PROJECT
   - popd
+  - mv target/$TARGET/release/*.tar.xz .
 
 deploy:
   provider: releases
