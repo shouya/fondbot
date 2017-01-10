@@ -44,7 +44,7 @@ before_deploy:
   - cargo build --target $TARGET --release
   - file target/$TARGET/release/$PROJECT
   - pushd target/$TARGET/release
-  - tar cJf $PROJECT-$TARGET.tar.xz $PROJECT
+  - tar cJf ../../../$PROJECT-$TARGET.tar.xz $PROJECT
   - popd
 
 deploy:
