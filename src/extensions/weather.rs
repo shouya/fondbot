@@ -44,7 +44,7 @@ impl BotExtension for Weather {
     }
 
     fn save(&self) -> JsonValue {
-        serde_json::to_value(self)
+        serde_json::to_value(self).unwrap()
     }
     fn load(&mut self, val: JsonValue) {
         match serde_json::from_value(val) {

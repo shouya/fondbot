@@ -109,7 +109,7 @@ impl BotExtension for Tracker {
         for (_, handle) in &self.trackers {
             if let Ok(_) = handle.send(Signal::Save(tx.clone())) {
                 if let Ok(state) = rx.recv_timeout(Duration::from_millis(300)) {
-                    trackers.push(serde_json::to_value(state))
+                    trackers.push(serde_json::to_value(state).unwrap())
                 }
             }
         }

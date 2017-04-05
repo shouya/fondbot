@@ -30,7 +30,8 @@ impl Afk {
 
     fn notification_expired(&self) -> bool {
         assert!(self.is_afk());
-        Self::now() - self.last_notify.unwrap() >= notify_interval()
+        let last_notify = self.last_notify.unwrap();
+        Self::now().signed_duration_since(last_notify) >= notify_interval()
     }
 
     fn report_afk(&mut self, msg: &tg::Message, bot: &Bot) {
@@ -45,7 +46,8 @@ impl Afk {
 
         let who = self.who.clone().unwrap_or("Somebody".into());
         let afk_at = Self::format_time(&self.afk_at.unwrap());
-        let duration = Self::format_duration(&(Self::now() - self.afk_at.unwrap()));
+        let duration = Self::now().signed_duration_since(self.afk_at.unwrap());
+        let duration = Self::format_duration(&duration);
         let reason = self.reason.clone().unwrap_or("[not given]".into());
 
         let txt = format!("{} is *AFK* now.\nAFK set time: _{}, {} ago_\n*Reason*: {}",
@@ -137,7 +139,7 @@ impl BotExtension for Afk {
     }
 
     fn save(&self) -> JsonValue {
-        serde_json::to_value(self)
+        serde_json::to_value(self).unwrap()
     }
     fn load(&mut self, val: JsonValue) {
         *self = serde_json::from_value(val).unwrap()

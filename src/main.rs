@@ -10,6 +10,10 @@ extern crate dotenv;
 #[macro_use]
 extern crate lazy_static;
 
+extern crate serde;
+#[macro_use(json, json_internal)]
+pub extern crate serde_json;
+
 mod common;
 mod extensions;
 mod ext_stack;
@@ -21,29 +25,6 @@ mod tg_logger;
 use common::*;
 use extensions::*;
 use ext_stack::ExtensionStack;
-
-fn process_message(ctx: &Context, msg: &tg::Message) {
-    let mut exts = ctx.exts.borrow_mut();
-    exts.process(msg, ctx);
-}
-
-fn serve(ctx: &mut Context) {
-    let mut listener = {
-        ctx.bot.listener(tg::ListeningMethod::LongPoll(None))
-    };
-
-    listener.listen(move |u| {
-            info!("Got msg: {:?}", u);
-            if let Some(mut msg) = u.message {
-                msg.clean_cmd();
-                process_message(ctx, &msg);
-            }
-            info!("saving state");
-            ctx.save_state();
-            Ok(tg::ListeningAction::Continue)
-        })
-        .unwrap();
-}
 
 fn setup_logger() {
     use slog::{DrainExt, Level, LevelFilter};
@@ -84,6 +65,6 @@ fn main() {
     ctx.load_state();
 
     info!("Started serving");
-    serve(&mut ctx);
+    ctx.serve();
     // exts.process(ctx);
 }

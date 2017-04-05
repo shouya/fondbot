@@ -33,23 +33,20 @@ impl ExtensionStack {
     // }
 
     #[allow(dead_code)]
-    pub fn save(&self) -> JsonValue {
-        let mut obj = serde_json::Map::new();
-        for ext in &self.extensions {
-            obj.insert(ext.name().into(), ext.save());
-        }
-        JsonValue::Object(obj)
+    pub fn save(&self) -> Dict<JsonValue> {
+        self.extensions
+            .iter()
+            .map(|e| (e.name().into(), e.save()))
+            .collect::<Dict<JsonValue>>()
     }
 
-    pub fn load(&mut self, json: JsonValue) {
-        if let JsonValue::Object(obj) = json {
-            for ext in &mut self.extensions {
-                if let Some(ext_json) = obj.get(ext.name().into()) {
-                    info!("Loading config to extension: {}", ext.name());
-                    ext.load(ext_json.clone());
-                } else {
-                    info!("Config to extension {} is not available", ext.name());
-                }
+    pub fn load(&mut self, map: &Dict<JsonValue>) {
+        for ext in &mut self.extensions {
+            if let Some(ext_json) = map.get(ext.name().into()) {
+                info!("Loading config to extension: {}", ext.name());
+                ext.load(ext_json.clone());
+            } else {
+                error!("Config to extension {} is not available", ext.name());
             }
         }
     }

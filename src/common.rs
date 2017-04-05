@@ -1,11 +1,10 @@
 #![macro_use]
 
 pub extern crate telegram_bot;
-pub extern crate serde;
-pub extern crate serde_json;
 pub extern crate erased_serde;
 pub extern crate regex;
 
+pub use serde_json;
 pub use serde_json::Value as JsonValue;
 pub use serde::de::Deserialize;
 pub use serde::ser::Serialize;
