@@ -8,7 +8,8 @@ pub struct Weather {
 }
 
 pub trait WeatherProvider: fmt::Display {
-    fn from_query(city: &str, extra: Option<&str>) -> Result<Self> where Self: Sized;
+    fn from_query(city: &str, extra: Option<&str>) -> Result<Self>
+        where Self: Sized;
 }
 
 impl BotExtension for Weather {
@@ -33,7 +34,8 @@ impl BotExtension for Weather {
                     return;
                 }
 
-                self.weather_loc.push((city.unwrap().clone(), long_lat.unwrap().clone()));
+                self.weather_loc
+                    .push((city.unwrap().clone(), long_lat.unwrap().clone()));
             }
             _ => ctx.bot.reply_to(msg, "Command not recognized"),
         }
@@ -49,7 +51,9 @@ impl BotExtension for Weather {
     fn load(&mut self, val: JsonValue) {
         match serde_json::from_value(val) {
             Ok(val) => *self = val,
-            Err(e) => warn!("Failed to restore state for {}: {}", self.name(), e),
+            Err(e) => {
+                warn!("Failed to restore state for {}: {}", self.name(), e)
+            }
         }
     }
 }

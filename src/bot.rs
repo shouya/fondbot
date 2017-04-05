@@ -20,7 +20,10 @@ pub trait TgApiExt {
     {
         self.send_raw(msg.chat_id(), msg.message_id(), txt, None)
     }
-    fn reply_md_and_get_msg<R, T>(&self, msg: R, md_txt: T) -> Result<tg::Message>
+    fn reply_md_and_get_msg<R, T>(&self,
+                                  msg: R,
+                                  md_txt: T)
+                                  -> Result<tg::Message>
         where R: Repliable,
               T: Into<String>
     {
@@ -138,7 +141,8 @@ impl<'a> TgMessageExt for tg::Message {
 
     fn is_cmd(&self, prefix: &str) -> bool {
         if let Some(txt) = self.msg_txt() {
-            txt.eq(&format!("/{}", prefix)) || txt.starts_with(&format!("/{} ", prefix))
+            txt.eq(&format!("/{}", prefix)) ||
+            txt.starts_with(&format!("/{} ", prefix))
         } else {
             false
         }

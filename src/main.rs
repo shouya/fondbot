@@ -29,7 +29,8 @@ use ext_stack::ExtensionStack;
 fn setup_logger() {
     use slog::{DrainExt, Level, LevelFilter};
     let api_token = std::env::var("TELEGRAM_BOT_TOKEN").unwrap();
-    let log_channel = std::env::var("TELEGRAM_LOG_CHANNEL").unwrap().parse::<i64>().unwrap();
+    let log_channel =
+        std::env::var("TELEGRAM_LOG_CHANNEL").unwrap().parse::<i64>().unwrap();
     let tg_drain = tg_logger::TgDrain::new(&api_token, log_channel);
     let tg_drain_filtered = LevelFilter::new(tg_drain, Level::Warning);
 

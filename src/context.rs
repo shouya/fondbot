@@ -27,12 +27,16 @@ impl ContextState {
         let json: JsonValue = json!({
             "safe_chats": self.safe_chats.clone()
         });
-        json.as_object().unwrap().iter().map(|(a, b)| (a.clone(), b.clone())).collect()
+        json.as_object()
+            .unwrap()
+            .iter()
+            .map(|(a, b)| (a.clone(), b.clone()))
+            .collect()
     }
 
     pub fn load_state(&mut self, map: &Dict<JsonValue>) {
         self.safe_chats = serde_json::from_value(map["safe_chats"].clone())
-            .expect("error reading safe_chats");
+            .unwrap_or_default()
     }
 }
 
@@ -49,7 +53,8 @@ impl Context {
     pub fn save_state(&self) {
         let mut exts_val = self.exts.borrow().save();
         exts_val.append(&mut self.state.borrow().save_state());
-        let mut file = File::create(Path::new(&self.save_to)).expect("Invalid state filename");
+        let mut file = File::create(Path::new(&self.save_to))
+            .expect("Invalid state filename");
         if serde_json::ser::to_writer_pretty(&mut file, &exts_val).is_err() {
             warn!("error writing context state to file");
         }
@@ -63,7 +68,9 @@ impl Context {
     pub fn load_state(&mut self) {
         File::open(Path::new(&self.save_to))
             .map_err(|e| e.to_string())
-            .and_then(|f| serde_json::de::from_reader(f).map_err(|e| e.to_string()))
+            .and_then(|f| {
+                serde_json::de::from_reader(f).map_err(|e| e.to_string())
+            })
             .map(|map| {
                 self.exts.borrow_mut().load(&map);
                 self.state.borrow_mut().load_state(&map);
@@ -79,8 +86,8 @@ impl Context {
             exts.process(msg, self);
         } else {
             self.bot.reply_to(msg,
-                              "Unauthorized access. This incidence will be reported to \
-                               administrator.");
+                              "Unauthorized access. This incidence will be \
+                               reported to administrator.");
         }
     }
 

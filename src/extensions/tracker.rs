@@ -118,7 +118,8 @@ impl BotExtension for Tracker {
     fn load(&mut self, val: JsonValue) {
         if let JsonValue::Array(arr) = val {
             for json in arr {
-                let state = serde_json::from_value::<TrackerState>(json).unwrap();
+                let state = serde_json::from_value::<TrackerState>(json)
+                    .unwrap();
                 let no = state.tracking_no.clone();
                 let tracker = state.into_tracker().unwrap();
                 self.trackers.insert(no, tracker.schedule());
@@ -177,7 +178,8 @@ impl Tracker {
     }
 
     fn list(&mut self) -> String {
-        let mut out = format!(">>> Tracking {} items <<<\n", self.trackers.len());
+        let mut out =
+            format!(">>> Tracking {} items <<<\n", self.trackers.len());
         for (k, v) in &self.trackers {
             let state = if Self::is_alive(v) {
                 "`[alive]`"
@@ -204,7 +206,8 @@ impl Tracker {
             auto: Vec<_Auto>,
         }
 
-        let url = format!("{}/autonumber/autoComNum?text={}", BASE_URL, tracking_no);
+        let url =
+            format!("{}/autonumber/autoComNum?text={}", BASE_URL, tracking_no);
         let result: _AutoComNum = try_strerr!(request(&url));
         result.auto
             .first()
@@ -212,7 +215,9 @@ impl Tracker {
             .ok_or("Express provider not found".into())
     }
 
-    fn query_express_progress(tracking_no: &str, provider: &str) -> Result<Progress> {
+    fn query_express_progress(tracking_no: &str,
+                              provider: &str)
+                              -> Result<Progress> {
         let url = format!("{}/query?type={}&postid={}",
                           BASE_URL,
                           provider,
@@ -241,7 +246,8 @@ impl ProgressTracker {
     fn schedule(self) -> TrackerHandle {
         let (tx, rx) = std::sync::mpsc::channel();
         let check_intvl = 5 * 60 * 1000; // 5 min
-        Timer::<Signal>::new(check_intvl, tx.clone(), Signal::Tick).tick_forever();
+        Timer::<Signal>::new(check_intvl, tx.clone(), Signal::Tick)
+            .tick_forever();
 
         let owntx = tx.clone();
         std::thread::spawn(move || {
@@ -354,7 +360,8 @@ impl TrackerState {
 
     fn into_tracker(self) -> Result<ProgressTracker> {
         let builder = ProgressTracker::from_tracking_no;
-        let tracker = try!(builder(&self.tracking_no, (self.chat_id, self.last_msg_id)));
+        let tracker =
+            try!(builder(&self.tracking_no, (self.chat_id, self.last_msg_id)));
         tracker.ack_len.set(self.ack_len);
         Ok(tracker)
     }

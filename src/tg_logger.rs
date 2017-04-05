@@ -12,7 +12,10 @@ pub struct TgDrain {
 
 impl Drain for TgDrain {
     type Error = ();
-    fn log(&self, info: &Record, options: &OwnedKeyValueList) -> Result<(), ()> {
+    fn log(&self,
+           info: &Record,
+           options: &OwnedKeyValueList)
+           -> Result<(), ()> {
         let text = format_log(info, options).clone();
         self.send_message(text);
         Ok(())

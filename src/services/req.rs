@@ -10,9 +10,9 @@ use self::hyper::Client;
 use self::hyper::client::IntoUrl;
 use self::hyper::header::UserAgent;
 
-const USER_AGENT: &'static str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) \
-                                  AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.98 \
-                                  Safari/537.36";
+const USER_AGENT: &'static str = "Mozilla/5.0 (Macintosh; Intel Mac OS X \
+                                  10_12_1) AppleWebKit/537.36 (KHTML, like \
+                                  Gecko) Chrome/54.0.2840.98 Safari/537.36";
 
 pub fn request<URL: IntoUrl, T: Deserialize>(url: URL) -> Result<T> {
     let url = url.into_url().unwrap();

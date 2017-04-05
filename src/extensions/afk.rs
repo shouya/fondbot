@@ -50,7 +50,8 @@ impl Afk {
         let duration = Self::format_duration(&duration);
         let reason = self.reason.clone().unwrap_or("[not given]".into());
 
-        let txt = format!("{} is *AFK* now.\nAFK set time: _{}, {} ago_\n*Reason*: {}",
+        let txt = format!("{} is *AFK* now.\nAFK set time: _{}, {} \
+                           ago_\n*Reason*: {}",
                           who,
                           afk_at,
                           duration,
