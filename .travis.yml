@@ -30,10 +30,6 @@ before_install:
   - export PATH="$PATH:$HOME/.cargo/bin"
 
 install:
-  - sh ~/rust/lib/rustlib/uninstall.sh
-  - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=nightly-$TARGET
-  - rustup toolchain install nightly-$TARGET
-  - rustup default nightly
   - rustc -V
   - cargo -V
 
