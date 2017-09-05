@@ -26,6 +26,7 @@ pub use services::*;
 #[allow(unused_variables)]
 pub trait BotExtension {
     fn init(ctx: &Context) -> Self where Self: Sized;
+
     fn process(&mut self, msg: &tg::Message, ctx: &Context);
     fn name(&self) -> &str;
 

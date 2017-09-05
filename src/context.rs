@@ -1,12 +1,14 @@
 use common::*;
 use ext_stack::ExtensionStack;
 use db::Db;
+
+use std::collections::HashSet;
 use std::cell::RefCell;
 use std::env;
 
 #[derive(Serialize, Deserialize)]
 pub struct ContextState {
-    pub safe_chats: Vec<Integer>,
+    pub safe_chats: HashSet<Integer>,
 }
 
 pub struct Context {
@@ -31,10 +33,7 @@ impl Context {
 
     pub fn add_safe_chat(&self, chat_id: Integer) {
         let mut state = self.context_state();
-        if state.safe_chats.contains(&chat_id) {
-            return;
-        }
-        state.safe_chats.push(chat_id);
+        state.safe_chats.insert(chat_id);
         self.db.save_conf("context-state", state);
     }
 
