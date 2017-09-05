@@ -1,4 +1,5 @@
 #![feature(custom_attribute)]
+#![feature(iterator_for_each)]
 #[macro_use]
 extern crate serde_derive;
 #[macro_use(o, slog_log, slog_trace, slog_debug, slog_info, slog_warn, slog_error)]
@@ -64,11 +65,10 @@ fn main() {
         exts.plug(tracker::Tracker::new());
         exts.plug(weather::Weather::new());
 
-        Context::new(bot, exts, "state.json".into())
+        Context::new(bot, exts)
     };
 
-    info!("Loading state");
-    ctx.load_state();
+    ctx.load_safe_chats_from_env();
 
     info!("Started serving");
     ctx.serve();
@@ -78,7 +78,7 @@ fn main() {
 #[allow(dead_code)]
 fn debug() {
     let db = db::Db::init();
-    db.save_conf("a", "'!@$!@#%#$&$%$)^&)&^*^!#$");
+    db.save_conf("a", "\\dd'!@$!@#%#$&$%$)^&)&^*^!#$");
     let v = db.load_conf::<String>("a");
     println!("got: {:?}", v);
 }

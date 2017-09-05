@@ -1,3 +1,4 @@
 target
 state.json
+data.db
 .env
