@@ -38,7 +38,7 @@ fn setup_logger() {
     slog_scope::set_global_logger(root_logger);
 }
 
-const DEBUG: bool = true;
+const DEBUG: bool = false;
 
 fn main() {
     if DEBUG {

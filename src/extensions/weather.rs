@@ -19,11 +19,10 @@ impl BotExtension for Weather {
         ctx.db.load_conf("weather").unwrap_or_default()
     }
 
-    fn should_process(&self, msg: &tg::Message, _: &Context) -> bool {
-        msg.is_cmds("weather add_loc del_loc")
-    }
-
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
+        if !msg.is_cmds("weather add_loc del_loc") {
+            return
+        }
         match msg.cmd_cmd().unwrap().as_ref() {
             "weather" => self.send_weather_report(msg),
             "add_loc" => {

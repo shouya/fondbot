@@ -16,11 +16,8 @@ impl ExtensionStack {
 
     pub fn process(&mut self, msg: &tg::Message, ctx: &Context) {
         for ext in &mut self.extensions {
-            debug!("Checking with plugin: {}", ext.name());
-            if ext.should_process(msg, ctx) {
-                debug!("Processing with plugin: {}", ext.name());
-                ext.process(msg, ctx);
-            }
+            trace!("Checking with plugin: {}", ext.name());
+            ext.process(msg, ctx);
         }
     }
 

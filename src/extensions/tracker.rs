@@ -54,10 +54,10 @@ impl BotExtension for Tracker {
         Tracker { trackers: Dict::new() }
     }
 
-    fn should_process(&self, msg: &tg::Message, _: &Context) -> bool {
-        msg.is_cmds("track untrack list query cleanup")
-    }
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
+        if !msg.is_cmds("track untrack list query cleanup") {
+            return
+        }
         match msg.cmd_cmd().unwrap().as_ref() {
             "track" => {
                 if let Some(tracking_no) = msg.cmd_arg("track") {

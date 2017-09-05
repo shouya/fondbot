@@ -105,14 +105,11 @@ impl BotExtension for Afk {
         ctx.db.load_conf("afk").unwrap_or_default()
     }
 
-    fn should_process(&self, msg: &tg::Message, _: &Context) -> bool {
-        if self.is_afk() {
-            return true;
-        }
-        msg.is_cmd("afk")
-    }
-
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
+        if !self.is_afk() && !msg.is_cmd("afk") {
+            return;
+        }
+
         if msg.is_cmd("afk") {
             self.set_afk(msg);
             ctx.bot.reply_to(msg, "Afk set");
