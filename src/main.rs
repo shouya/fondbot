@@ -60,6 +60,7 @@ fn main() {
     ctx.plug_ext::<afk::Afk>();
     ctx.plug_ext::<tracker::Tracker>();
     ctx.plug_ext::<weather::Weather>();
+    ctx.plug_ext::<manager::Manager>();
 
     ctx.load_safe_chats_from_env();
 
