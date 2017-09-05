@@ -124,6 +124,7 @@ impl BotExtension for Afk {
 
         ctx.db.save_conf("afk", &self);
         self.report_afk(msg, &ctx.bot);
+        ctx.set_bypass();
     }
 
     fn report(&self) -> String {

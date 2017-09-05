@@ -1,7 +1,7 @@
 use common::*;
 
 pub struct ExtensionStack {
-    extensions: Vec<Box<BotExtension>>,
+    pub extensions: Vec<Box<BotExtension>>,
 }
 
 impl ExtensionStack {

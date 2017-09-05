@@ -42,7 +42,7 @@ impl Db {
     }
 
     pub fn save_conf<T>(&self, key: &str, value: T) where T: Serialize {
-        let value_str = serde_json::to_string(&value).unwrap();
+        let value_str = serde_json::to_string_pretty(&value).unwrap();
         self.execute_sql(
             &format!("INSERT INTO config (key,value) VALUES('{}', '{}')",
                      quote_str(&key), quote_str(&value_str)))
@@ -57,6 +57,12 @@ impl Db {
             .get_result::<String>(&*self.conn_ref())
             .ok()
             .and_then(|val_str| serde_json::from_str(&val_str).ok())
+    }
+
+    pub fn list_conf(&self) -> Vec<(String, String)> {
+        sql::<(Text, Text)>("SELECT key, value FROM config")
+            .get_results(&*self.conn_ref())
+            .unwrap_or_default()
     }
 
     fn conn_ref(&self) -> Ref<SqliteConnection> {

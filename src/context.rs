@@ -3,10 +3,10 @@ use ext_stack::ExtensionStack;
 use db::Db;
 
 use std::collections::HashSet;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::env;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct ContextState {
     pub safe_chats: HashSet<Integer>,
 }
@@ -14,13 +14,8 @@ pub struct ContextState {
 pub struct Context {
     pub bot: tg::Api,
     pub exts: RefCell<ExtensionStack>,
-    pub db: Db
-}
-
-impl Default for ContextState {
-    fn default() -> Self {
-        ContextState { safe_chats: vec![] }
-    }
+    pub db: Db,
+    pub bypass: Cell<bool>
 }
 
 impl Context {
@@ -43,11 +38,16 @@ impl Context {
         self.exts.borrow_mut().plug(T::init(&self));
     }
 
+    pub fn set_bypass(&self) {
+        self.bypass.set(true)
+    }
+
     pub fn new(bot: tg::Api) -> Context {
         Context {
             bot: bot,
             exts: RefCell::new(ExtensionStack::new()),
-            db: Db::init()
+            db: Db::init(),
+            bypass: Cell::new(false)
         }
     }
 
@@ -65,15 +65,27 @@ impl Context {
     }
 
     pub fn process_message(&self, msg: &tg::Message) {
-        let mut exts = self.exts.borrow_mut();
         if self.safety_guard(msg) {
-            exts.process(msg, self);
+            self.exts_process_message(msg);
         } else {
             self.bot.reply_to(msg,
                               "Unauthorized access. This incidence will be \
                                reported to administrator.");
             // TODO: Report event
         }
+    }
+
+    pub fn exts_process_message(&self, msg: &tg::Message) {
+        let mut exts = self.exts.borrow_mut();
+        for ext in &mut exts.extensions {
+            if self.bypass.get() {
+                trace!("Not processing with plugin: {} (bypassed)", ext.name());
+            } else {
+                trace!("Processing with plugin: {}", ext.name());
+                ext.process(msg, self);
+            }
+        }
+        self.bypass.set(false);
     }
 
     pub fn serve(&mut self) {
