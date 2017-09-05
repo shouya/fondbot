@@ -51,7 +51,7 @@ struct TrackerState {
 }
 
 impl BotExtension for Tracker {
-    fn new() -> Self {
+    fn init(ctx: &Context) -> Self {
         Tracker { trackers: Dict::new() }
     }
 
@@ -101,30 +101,6 @@ impl BotExtension for Tracker {
     }
     fn name(&self) -> &str {
         "tracker"
-    }
-
-    fn save(&self) -> JsonValue {
-        let (tx, rx) = std::sync::mpsc::channel();
-        let mut trackers = Vec::new();
-        for (_, handle) in &self.trackers {
-            if let Ok(_) = handle.send(Signal::Save(tx.clone())) {
-                if let Ok(state) = rx.recv_timeout(Duration::from_millis(300)) {
-                    trackers.push(serde_json::to_value(state).unwrap())
-                }
-            }
-        }
-        JsonValue::Array(trackers)
-    }
-    fn load(&mut self, val: JsonValue) {
-        if let JsonValue::Array(arr) = val {
-            for json in arr {
-                let state = serde_json::from_value::<TrackerState>(json)
-                    .unwrap();
-                let no = state.tracking_no.clone();
-                let tracker = state.into_tracker().unwrap();
-                self.trackers.insert(no, tracker.schedule());
-            }
-        }
     }
 }
 

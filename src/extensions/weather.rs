@@ -13,7 +13,7 @@ pub trait WeatherProvider: fmt::Display {
 }
 
 impl BotExtension for Weather {
-    fn new() -> Self
+    fn init(ctx: &Context) -> Self
         where Self: Sized
     {
         Weather { weather_loc: Vec::new() }
@@ -43,18 +43,6 @@ impl BotExtension for Weather {
 
     fn name(&self) -> &str {
         "weather"
-    }
-
-    fn save(&self) -> JsonValue {
-        serde_json::to_value(self).unwrap()
-    }
-    fn load(&mut self, val: JsonValue) {
-        match serde_json::from_value(val) {
-            Ok(val) => *self = val,
-            Err(e) => {
-                warn!("Failed to restore state for {}: {}", self.name(), e)
-            }
-        }
     }
 }
 

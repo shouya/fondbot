@@ -25,7 +25,7 @@ pub use services::*;
 
 #[allow(unused_variables)]
 pub trait BotExtension {
-    fn new() -> Self where Self: Sized;
+    fn init(ctx: &Context) -> Self where Self: Sized;
 
     fn should_process(&self, msg: &tg::Message, ctx: &Context) -> bool {
         false
@@ -37,11 +37,6 @@ pub trait BotExtension {
     fn report(&self) -> String {
         self.name().into()
     }
-
-    fn save(&self) -> JsonValue {
-        JsonValue::Null
-    }
-    fn load(&mut self, JsonValue) {}
 }
 
 // convert Result<T, E: Debug> to Result<T, String>

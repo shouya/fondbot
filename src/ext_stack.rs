@@ -31,23 +31,4 @@ impl ExtensionStack {
     //              ext.report())
     //   }
     // }
-
-    #[allow(dead_code)]
-    pub fn save(&self) -> Dict<JsonValue> {
-        self.extensions
-            .iter()
-            .map(|e| (e.name().into(), e.save()))
-            .collect::<Dict<JsonValue>>()
-    }
-
-    pub fn load(&mut self, map: &Dict<JsonValue>) {
-        for ext in &mut self.extensions {
-            if let Some(ext_json) = map.get(ext.name().into()) {
-                info!("Loading config to extension: {}", ext.name());
-                ext.load(ext_json.clone());
-            } else {
-                error!("Config to extension {} is not available", ext.name());
-            }
-        }
-    }
 }

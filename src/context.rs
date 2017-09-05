@@ -38,10 +38,16 @@ impl Context {
         self.db.save_conf("context-state", state);
     }
 
-    pub fn new(bot: tg::Api, exts: ExtensionStack) -> Context {
+    pub fn plug_ext<T>(&mut self)
+        where T: BotExtension + 'static
+    {
+        self.exts.borrow_mut().plug(T::init(&self));
+    }
+
+    pub fn new(bot: tg::Api) -> Context {
         Context {
             bot: bot,
-            exts: RefCell::new(exts),
+            exts: RefCell::new(ExtensionStack::new()),
             db: Db::init()
         }
     }
@@ -77,12 +83,11 @@ impl Context {
         };
 
         listener.listen(move |u| {
-                info!("Got msg: {:?}", u);
+                debug!("Got msg: {:?}", u);
                 if let Some(mut msg) = u.message {
                     msg.clean_cmd();
                     self.process_message(&msg);
                 }
-                info!("saving state");
                 Ok(tg::ListeningAction::Continue)
             })
             .unwrap();

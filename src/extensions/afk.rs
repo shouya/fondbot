@@ -9,7 +9,7 @@ fn notify_interval() -> Duration {
     Duration::seconds(60)
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Afk {
     who: Option<String>,
     afk_at: Option<DateTime<Utc>>,
@@ -101,13 +101,8 @@ impl Afk {
 
 
 impl BotExtension for Afk {
-    fn new() -> Self {
-        Afk {
-            who: None,
-            afk_at: None,
-            reason: None,
-            last_notify: None,
-        }
+    fn init(ctx: &Context) -> Self {
+        ctx.db.load_conf("afk").unwrap_or_default()
     }
 
     fn should_process(&self, msg: &tg::Message, _: &Context) -> bool {
@@ -130,6 +125,7 @@ impl BotExtension for Afk {
             return;
         }
 
+        ctx.db.save_conf("afk", &self);
         self.report_afk(msg, &ctx.bot);
     }
 
@@ -138,12 +134,5 @@ impl BotExtension for Afk {
     }
     fn name(&self) -> &str {
         "afk"
-    }
-
-    fn save(&self) -> JsonValue {
-        serde_json::to_value(self).unwrap()
-    }
-    fn load(&mut self, val: JsonValue) {
-        *self = serde_json::from_value(val).unwrap()
     }
 }

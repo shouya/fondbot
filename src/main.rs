@@ -24,7 +24,6 @@ mod db;
 
 use common::*;
 use extensions::*;
-use ext_stack::ExtensionStack;
 
 fn setup_logger() {
     use slog::{DrainExt, Level, LevelFilter};
@@ -58,21 +57,15 @@ fn main() {
     info!("Eating up all previous messages!");
     info!("Consumed {} messages", bot.consume_updates());
 
-    let mut ctx = {
-        let mut exts = ExtensionStack::new();
-
-        exts.plug(afk::Afk::new());
-        exts.plug(tracker::Tracker::new());
-        exts.plug(weather::Weather::new());
-
-        Context::new(bot, exts)
-    };
+    let mut ctx = Context::new(bot);
+    ctx.plug_ext::<afk::Afk>();
+    ctx.plug_ext::<tracker::Tracker>();
+    ctx.plug_ext::<weather::Weather>();
 
     ctx.load_safe_chats_from_env();
 
     info!("Started serving");
     ctx.serve();
-    // exts.process(ctx);
 }
 
 #[allow(dead_code)]
