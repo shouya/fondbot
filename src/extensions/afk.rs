@@ -1,7 +1,8 @@
 use common::*;
 extern crate chrono;
 
-use self::chrono::{DateTime, Duration, UTC, TimeZone, FixedOffset};
+use self::chrono::Duration;
+use self::chrono::prelude::*;
 
 #[inline]
 fn notify_interval() -> Duration {
@@ -11,9 +12,9 @@ fn notify_interval() -> Duration {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Afk {
     who: Option<String>,
-    afk_at: Option<DateTime<UTC>>,
+    afk_at: Option<DateTime<Utc>>,
     reason: Option<String>,
-    last_notify: Option<DateTime<UTC>>,
+    last_notify: Option<DateTime<Utc>>,
 }
 
 impl Afk {
@@ -89,8 +90,8 @@ impl Afk {
         format!("{}", fmt)
     }
 
-    fn now() -> DateTime<UTC> {
-        chrono::UTC::now()
+    fn now() -> DateTime<Utc> {
+        chrono::Utc::now()
     }
 
     fn is_afk(&self) -> bool {

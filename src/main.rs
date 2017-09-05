@@ -3,16 +3,14 @@
 extern crate serde_derive;
 #[macro_use(o, slog_log, slog_trace, slog_debug, slog_info, slog_warn, slog_error)]
 extern crate slog;
-#[macro_use]
-extern crate slog_scope;
+#[macro_use] extern crate slog_scope;
 extern crate slog_term;
 extern crate dotenv;
-#[macro_use]
-extern crate lazy_static;
+#[macro_use] extern crate lazy_static;
 
 extern crate serde;
-#[macro_use(json, json_internal)]
-pub extern crate serde_json;
+#[macro_use(json, json_internal)] pub extern crate serde_json;
+#[macro_use] extern crate diesel;
 
 mod common;
 mod extensions;
@@ -21,6 +19,7 @@ mod context;
 mod bot;
 mod services;
 mod tg_logger;
+mod db;
 
 use common::*;
 use extensions::*;
@@ -40,7 +39,13 @@ fn setup_logger() {
     slog_scope::set_global_logger(root_logger);
 }
 
+const DEBUG: bool = true;
+
 fn main() {
+    if DEBUG {
+        debug();
+        return
+    }
     // DEBUG
     dotenv::dotenv().ok();
 
@@ -68,4 +73,12 @@ fn main() {
     info!("Started serving");
     ctx.serve();
     // exts.process(ctx);
+}
+
+#[allow(dead_code)]
+fn debug() {
+    let db = db::Db::init();
+    db.save_conf("a", "'!@$!@#%#$&$%$)^&)&^*^!#$");
+    let v = db.load_conf::<String>("a");
+    println!("got: {:?}", v);
 }
