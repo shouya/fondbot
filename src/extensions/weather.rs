@@ -2,7 +2,7 @@ use common::*;
 
 use std;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct Weather {
     weather_loc: Vec<(String, String)>,
 }
@@ -16,7 +16,7 @@ impl BotExtension for Weather {
     fn init(ctx: &Context) -> Self
         where Self: Sized
     {
-        Weather { weather_loc: Vec::new() }
+        ctx.db.load_conf("weather").unwrap_or_default()
     }
 
     fn should_process(&self, msg: &tg::Message, _: &Context) -> bool {

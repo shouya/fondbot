@@ -1,7 +1,6 @@
+#![allow(dead_code)]
 use std;
 use common::*;
-
-use std::time::Duration;
 
 type TrackerHandle = Sender<Signal>;
 
@@ -51,7 +50,7 @@ struct TrackerState {
 }
 
 impl BotExtension for Tracker {
-    fn init(ctx: &Context) -> Self {
+    fn init(_: &Context) -> Self {
         Tracker { trackers: Dict::new() }
     }
 

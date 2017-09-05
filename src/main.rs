@@ -10,8 +10,7 @@ extern crate dotenv;
 #[macro_use] extern crate lazy_static;
 
 extern crate serde;
-#[macro_use(json, json_internal)] pub extern crate serde_json;
-#[macro_use] extern crate diesel;
+pub extern crate serde_json;
 
 mod common;
 mod extensions;

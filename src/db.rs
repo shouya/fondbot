@@ -1,7 +1,9 @@
-use diesel::prelude::*;
-use diesel::expression::sql_literal::sql;
-use diesel::sqlite::SqliteConnection;
-use diesel::types::{Bool, Text};
+extern crate diesel;
+
+use self::diesel::prelude::*;
+use self::diesel::expression::sql_literal::sql;
+use self::diesel::sqlite::SqliteConnection;
+use self::diesel::types::{Bool, Text};
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
