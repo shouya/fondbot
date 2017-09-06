@@ -2,3 +2,5 @@ target
 state.json
 data.db
 .env
+history-dump
+*.rb
