@@ -1,3 +1,4 @@
+use diesel;
 use diesel::prelude::*;
 use diesel::expression::sql_literal::sql;
 use diesel::sqlite::SqliteConnection;
@@ -81,19 +82,6 @@ impl Db {
              );");
     }
 
-/*
-    pub fn save_message(&self, msg: tg::Message) -> bool {
-        sql::<Bool>(format!("INSERT TO messages {} VALUES {}",
-                            "(msg_id, user_id, chat_id, reply_to_msg_id, text, created_at)",
-                            "(?, ?, ?, ?, ?, ?)"))
-            .bind::<Integer, _>(msg.message_id)
-            .bind::<Integer, _>(msg.user.id)
-            .bind::<Integer, _>(msg.chat.id())
-            .bind::<Nullable<Integer>, _>(msg.reply.map(|x| x.message_id))
-            .bind::<Nullable<Text>, _>(msg.msg_txt())
-            .execute(&*self.conn_ref()).is_ok()
-    }
-*/
     pub fn save_conf<T>(&self, key: &str, value: T) where T: Serialize {
         let value_str = serde_json::to_string_pretty(&value).unwrap();
         self.execute_sql(
@@ -116,6 +104,12 @@ impl Db {
         sql::<(Text, Text)>("SELECT key, value FROM config")
             .get_results(&*self.conn_ref())
             .unwrap_or_default()
+    }
+
+    pub fn save_msg(&self, msg: &DbMessage) {
+        diesel::insert(msg)
+            .into(messages::table)
+            .execute(&*self.conn_ref());
     }
 
     pub fn conn_ref(&self) -> Ref<SqliteConnection> {

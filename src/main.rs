@@ -61,6 +61,7 @@ fn main() {
     info!("Initializing bot context");
     let mut ctx = Context::new(bot);
     info!("Initializing plugin stack");
+    ctx.plug_ext::<history::Saver>();
     ctx.plug_ext::<afk::Afk>();
     ctx.plug_ext::<tracker::Tracker>();
     ctx.plug_ext::<weather::Weather>();

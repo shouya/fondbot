@@ -54,7 +54,6 @@ pub trait TgMessageExt {
     fn cmd_arg(&self, prefix: &str) -> Option<String>;
     fn cmd_args(&self, prefix: &str) -> Vec<String>;
     fn clean_cmd(&mut self);
-    fn to_db_message(&self) -> DbMessage;
 }
 
 pub trait TgUserExt {
@@ -214,17 +213,6 @@ impl<'a> TgMessageExt for tg::Message {
 
             let old_txt = txt.clone();
             *txt = RE.replace(&old_txt, "$cmd").into_owned()
-        }
-    }
-
-    fn to_db_message(&self) -> DbMessage {
-        DbMessage {
-            msg_id: self.message_id,
-            user_id: self.from.id,
-            chat_id: self.chat.id(),
-            reply_to_msg_id: self.reply.as_ref().map(|ref x| x.message_id),
-            text: self.msg_txt(),
-            created_at: Some(self.date)
         }
     }
 }
