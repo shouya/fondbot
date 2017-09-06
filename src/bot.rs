@@ -1,5 +1,4 @@
 use common::*;
-use db::DbMessage;
 
 pub type Integer = i64;
 pub type Bot = tg::Api;

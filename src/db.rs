@@ -23,6 +23,7 @@ pub mod schema {
             msg_id -> BigInt,
             user_id -> BigInt,
             chat_id -> BigInt,
+            is_group -> Bool,
             reply_to_msg_id -> Nullable<BigInt>,
             text -> Nullable<Text>,
             created_at -> Nullable<BigInt>,
@@ -38,6 +39,7 @@ pub struct DbMessage {
     pub msg_id: i64,
     pub user_id: i64,
     pub chat_id: i64,
+    pub is_group: bool,
     pub reply_to_msg_id: Option<i64>,
     pub text: Option<String>,
     pub created_at: Option<i64>
@@ -76,6 +78,7 @@ impl Db {
                 msg_id BIGINT NOT NULL UNIQUE,
                 user_id BIGINT NOT NULL,
                 chat_id BIGINT NOT NULL,
+                is_group INT NOT NULL,
                 reply_to_msg_id BIGINT,
                 text TEXT,
                 created_at BIGINT
@@ -109,7 +112,8 @@ impl Db {
     pub fn save_msg(&self, msg: &DbMessage) {
         diesel::insert(msg)
             .into(messages::table)
-            .execute(&*self.conn_ref());
+            .execute(&*self.conn_ref())
+            .ok();
     }
 
     pub fn conn_ref(&self) -> Ref<SqliteConnection> {

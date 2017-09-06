@@ -113,12 +113,14 @@ impl BotExtension for Afk {
         if msg.is_cmd("afk") {
             self.set_afk(msg);
             ctx.bot.reply_to(msg, "Afk set");
+            ctx.db.save_conf("afk", &self);
             return;
         }
 
         if msg.is_cmd("noafk") {
             self.unset_afk();
             ctx.bot.reply_to(msg, "Afk unset");
+            ctx.db.save_conf("afk", &self);
             return;
         }
 

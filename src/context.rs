@@ -15,7 +15,8 @@ pub struct Context {
     pub bot: tg::Api,
     pub exts: RefCell<ExtensionStack>,
     pub db: Db,
-    pub bypass: Cell<bool>
+    pub bypass: Cell<bool>,
+    pub bot_user: tg::User
 }
 
 impl Context {
@@ -45,11 +46,13 @@ impl Context {
     }
 
     pub fn new(bot: tg::Api) -> Context {
+        let bot_user = bot.get_me().unwrap();
         Context {
             bot: bot,
             exts: RefCell::new(ExtensionStack::new()),
             db: Db::init(),
-            bypass: Cell::new(false)
+            bypass: Cell::new(false),
+            bot_user: bot_user
         }
     }
 
