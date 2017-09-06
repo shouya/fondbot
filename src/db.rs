@@ -1,9 +1,7 @@
-extern crate diesel;
-
-use self::diesel::prelude::*;
-use self::diesel::expression::sql_literal::sql;
-use self::diesel::sqlite::SqliteConnection;
-use self::diesel::types::{Bool, Text};
+use diesel::prelude::*;
+use diesel::expression::sql_literal::sql;
+use diesel::sqlite::SqliteConnection;
+use diesel::types::{Bool, Text};
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -11,9 +9,37 @@ use serde_json;
 
 use std::cell::{RefCell, Ref};
 
+const DB_FILE: &'static str = "data.db";
 
 pub struct Db {
     conn: RefCell<SqliteConnection>
+}
+
+pub mod schema {
+    table! {
+        messages (id) {
+            id -> Nullable<Integer>,
+            msg_id -> BigInt,
+            user_id -> BigInt,
+            chat_id -> BigInt,
+            reply_to_msg_id -> Nullable<BigInt>,
+            text -> Nullable<Text>,
+            created_at -> Nullable<BigInt>,
+        }
+    }
+}
+
+use self::schema::*;
+
+#[derive(Insertable, Queryable)]
+#[table_name="messages"]
+pub struct DbMessage {
+    pub msg_id: i64,
+    pub user_id: i64,
+    pub chat_id: i64,
+    pub reply_to_msg_id: Option<i64>,
+    pub text: Option<String>,
+    pub created_at: Option<i64>
 }
 
 pub fn quote_str(s: &str) -> String {
@@ -25,22 +51,49 @@ pub fn quote_str(s: &str) -> String {
 impl Db {
     pub fn init() -> Self {
         // check file
-        let conn = SqliteConnection::establish("data.db")
+        let conn = SqliteConnection::establish(DB_FILE)
                       .unwrap();
         let db = Db { conn: RefCell::new(conn) };
         db.init_table_config();
+        db.init_table_messages();
         db
     }
 
     pub fn init_table_config(&self) {
         self.execute_sql(
             "CREATE TABLE IF NOT EXISTS config (
-                id INTEGER PRIMARY_KEY ASC,
+                id INTEGER PRIMARY KEY ASC,
                 key TEXT UNIQUE,
                 value TEXT
              );");
     }
 
+    pub fn init_table_messages(&self) {
+        self.execute_sql(
+            "CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY ASC,
+                msg_id BIGINT NOT NULL UNIQUE,
+                user_id BIGINT NOT NULL,
+                chat_id BIGINT NOT NULL,
+                reply_to_msg_id BIGINT,
+                text TEXT,
+                created_at BIGINT
+             );");
+    }
+
+/*
+    pub fn save_message(&self, msg: tg::Message) -> bool {
+        sql::<Bool>(format!("INSERT TO messages {} VALUES {}",
+                            "(msg_id, user_id, chat_id, reply_to_msg_id, text, created_at)",
+                            "(?, ?, ?, ?, ?, ?)"))
+            .bind::<Integer, _>(msg.message_id)
+            .bind::<Integer, _>(msg.user.id)
+            .bind::<Integer, _>(msg.chat.id())
+            .bind::<Nullable<Integer>, _>(msg.reply.map(|x| x.message_id))
+            .bind::<Nullable<Text>, _>(msg.msg_txt())
+            .execute(&*self.conn_ref()).is_ok()
+    }
+*/
     pub fn save_conf<T>(&self, key: &str, value: T) where T: Serialize {
         let value_str = serde_json::to_string_pretty(&value).unwrap();
         self.execute_sql(
@@ -65,7 +118,7 @@ impl Db {
             .unwrap_or_default()
     }
 
-    fn conn_ref(&self) -> Ref<SqliteConnection> {
+    pub fn conn_ref(&self) -> Ref<SqliteConnection> {
         self.conn.borrow()
     }
 

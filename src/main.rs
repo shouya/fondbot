@@ -1,17 +1,20 @@
 #![feature(custom_attribute)]
 #![feature(iterator_for_each)]
-#[macro_use]
-extern crate serde_derive;
-#[macro_use(o, slog_log, slog_trace, slog_debug, slog_info, slog_warn, slog_error)]
-extern crate slog;
+#[macro_use] extern crate serde_derive;
+#[macro_use] extern crate slog;
 #[macro_use] extern crate slog_scope;
+#[macro_use] extern crate lazy_static;
+#[macro_use] extern crate diesel_codegen;
+#[macro_use] extern crate diesel;
+
 extern crate slog_term;
 extern crate dotenv;
-#[macro_use] extern crate lazy_static;
 
-extern crate serde;
+pub extern crate serde;
 pub extern crate serde_json;
+pub extern crate chrono;
 
+mod db;
 mod common;
 mod extensions;
 mod ext_stack;
@@ -19,7 +22,6 @@ mod context;
 mod bot;
 mod services;
 mod tg_logger;
-mod db;
 
 use common::*;
 use extensions::*;
@@ -56,12 +58,15 @@ fn main() {
     info!("Eating up all previous messages!");
     info!("Consumed {} messages", bot.consume_updates());
 
+    info!("Initializing bot context");
     let mut ctx = Context::new(bot);
+    info!("Initializing plugin stack");
     ctx.plug_ext::<afk::Afk>();
     ctx.plug_ext::<tracker::Tracker>();
     ctx.plug_ext::<weather::Weather>();
     ctx.plug_ext::<manager::Manager>();
 
+    info!("Loading safe chats");
     ctx.load_safe_chats_from_env();
 
     info!("Started serving");

@@ -35,7 +35,9 @@ impl Context {
     pub fn plug_ext<T>(&mut self)
         where T: BotExtension + 'static
     {
-        self.exts.borrow_mut().plug(T::init(&self));
+        let plugin = T::init(&self);
+        info!("Loading plugin {}", plugin.name());
+        self.exts.borrow_mut().plug(plugin);
     }
 
     pub fn set_bypass(&self) {

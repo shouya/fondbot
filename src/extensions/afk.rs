@@ -1,8 +1,8 @@
 use common::*;
-extern crate chrono;
 
-use self::chrono::Duration;
-use self::chrono::prelude::*;
+use chrono;
+use chrono::Duration;
+use chrono::prelude::*;
 
 #[inline]
 fn notify_interval() -> Duration {
