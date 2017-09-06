@@ -34,13 +34,11 @@ install:
   - cargo -V
 
 script:
-  - cargo build --target $TARGET --verbose
+  - cargo build --target $TARGET --release --verbose
   - cargo test --target $TARGET --verbose
-  - file target/$TARGET/debug/$PROJECT
+  - file target/$TARGET/release/$PROJECT
 
 before_deploy:
-  - cargo build --target $TARGET --release
-  - file target/$TARGET/release/$PROJECT
   - pushd target/$TARGET/release
   - tar cJf $PROJECT-$TARGET.tar.xz $PROJECT
   - popd
