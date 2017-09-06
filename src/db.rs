@@ -75,13 +75,14 @@ impl Db {
         self.execute_sql(
             "CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY ASC,
-                msg_id BIGINT NOT NULL UNIQUE,
+                msg_id BIGINT NOT NULL,
                 user_id BIGINT NOT NULL,
                 chat_id BIGINT NOT NULL,
                 is_group INT NOT NULL,
                 reply_to_msg_id BIGINT,
                 text TEXT,
-                created_at BIGINT
+                created_at BIGINT,
+                UNIQUE(msg_id, chat_id) ON CONFLICT IGNORE
              );");
     }
 
