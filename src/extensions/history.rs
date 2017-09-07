@@ -36,7 +36,7 @@ impl BotExtension for Saver {
     }
 
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
-        if msg.is_cmd("add_to_search_group") {
+        if msg.is_cmd("enable_search") {
             self.search_groups.push(msg.chat.id());
             ctx.db.save_conf("history.search_groups", self);
             ctx.bot.reply_to(msg, format!("Chat {} added to search group",
@@ -153,5 +153,4 @@ impl BotExtension for Searcher {
     fn name(&self) -> &str {
         "history_searcher"
     }
-
 }
