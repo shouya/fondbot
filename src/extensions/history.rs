@@ -11,12 +11,24 @@ pub struct Saver {
 #[derive(Debug, Clone, Default)]
 pub struct Searcher;
 
+fn chat_name(chat: &tg::Chat) -> String {
+    match *chat {
+        tg::Chat::Private { .. } => "private chat".into(),
+        tg::Chat::Group { ref title, .. } => title.clone(),
+        tg::Chat::Channel { ref name, .. } => {
+            name.as_ref().map(|x| x.clone()).unwrap_or("a channel".into())
+        }
+    }
+}
+
 fn to_db_message(msg: &tg::Message) -> DbMessage {
     DbMessage {
         id: None,
         msg_id: msg.message_id,
         user_id: msg.from.id,
+        user_name: Some(msg.from.user_name()),
         chat_id: msg.chat.id(),
+        chat_name: Some(chat_name(&msg.chat)),
         is_group: msg.chat.is_group() || msg.chat.is_supergroup(),
         reply_to_msg_id: msg.reply.as_ref().map(|ref x| x.message_id),
         text: msg.msg_txt(),
@@ -90,9 +102,13 @@ impl Searcher {
 
         for (i, message) in result.iter().enumerate() {
             writeln!(&mut reply_buf,
-                     "/search_result_{} ({}) {}",
+                     "/ref_{} ({}) [{}@{}]\n{}",
                      i + 1,
                      format_time(message.created_at),
+                     message.user_name.as_ref()
+                        .map(Clone::clone).unwrap_or("someone".into()),
+                     message.chat_name.as_ref()
+                        .map(Clone::clone).unwrap_or("some chat".into()),
                      message.text.clone().unwrap_or_default()).ok();
         }
         writeln!(&mut reply_buf, "---------------").ok();
@@ -130,7 +146,7 @@ impl BotExtension for Searcher {
 
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"^/search_result_(\d+)(@\w+bot)?$").unwrap();
+            static ref RE: Regex = Regex::new(r"^/ref_(\d+)(@\w+bot)?$").unwrap();
         };
         if msg.is_cmd("search") {
             ctx.db.save_conf("history.last_search_args", msg.cmd_args("search"));
@@ -147,7 +163,7 @@ impl BotExtension for Searcher {
             ctx.db.save_conf("history.last_search_page", page - 1);
             self.search(msg, ctx);
             return;
-        } 
+        }
         let msg_txt = msg.msg_txt().unwrap_or_default();
         let match_reference = RE.captures(&msg_txt);
         if let Some(caps) = match_reference {
