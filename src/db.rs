@@ -128,7 +128,8 @@ impl Db {
 
         let query = messages::table
             .filter(messages::text.is_not_null())
-            .filter(sql(&query_sql));
+            .filter(sql(&query_sql))
+            .order(messages::created_at.desc());
         let count: i64 = query
             .clone()
             .count()
