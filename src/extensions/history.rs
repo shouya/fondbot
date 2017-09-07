@@ -1,4 +1,5 @@
 use common::*;
+use db::SEARCH_PER;
 use db::DbMessage;
 use chrono::{DateTime, NaiveDateTime};
 
@@ -27,7 +28,7 @@ fn format_time(time: Option<i64>) -> String {
     let naive_time = NaiveDateTime::from_timestamp(time.unwrap_or_default(), 0);
     let time: DateTime<chrono::FixedOffset> =
         DateTime::from_utc(naive_time, *GLOBAL_TIMEZONE);
-    time.format("%Y-%m-%d %H:%M:%S").to_string()
+    time.format("%Y-%m-%d").to_string()
 }
 
 impl BotExtension for Saver {
@@ -75,33 +76,38 @@ impl Searcher {
         let patterns = args.iter()
             .map(|x| x.replace("*", "%"))
             .collect::<Vec<String>>();
-        let (count, result) = ctx.db.search_msg(1, &patterns);
+        let (count, result) = ctx.db.search_msg(page, &patterns);
         let result_count = result.len();
         let mut reply_buf = String::new();
+        let start = (page - 1) * SEARCH_PER + 1;
+        writeln!(&mut reply_buf, "Searching for: {}", args.join(" ")).ok();
         writeln!(&mut reply_buf,
-               "Showing page {} of {} search results (keywords: {})",
-               page as i64,
-               count,
-               args.join(","));
-        writeln!(&mut reply_buf, "----------");
+               "Showing {}-{} of {} search results",
+               start,
+               start + result_count - 1,
+               count).ok();
+        writeln!(&mut reply_buf, "---------------").ok();
+
         for (i, message) in result.iter().enumerate() {
             writeln!(&mut reply_buf,
-                     "/search_result_{} (`{}`) {}",
+                     "/search_result_{} ({}) {}",
                      i + 1,
                      format_time(message.created_at),
-                     message.text.clone().unwrap_or_default());
+                     message.text.clone().unwrap_or_default()).ok();
         }
+        writeln!(&mut reply_buf, "---------------").ok();
+
         if page > 1 {
-            writeln!(&mut reply_buf, "/search_prev_page");
+            writeln!(&mut reply_buf, "/search_prev_page").ok();
         }
-        let count_so_far = result_count + (page - 1) * 10;
+        let count_so_far = result_count + (page - 1) * SEARCH_PER;
         if count_so_far < count {
-            writeln!(&mut reply_buf, "/search_next_page");
+            writeln!(&mut reply_buf, "/search_next_page").ok();
         }
 
         ctx.db.save_conf("history.last_search_result", result);
 
-        ctx.bot.reply_md_to(msg, reply_buf);
+        ctx.bot.reply_to(msg, reply_buf);
     }
 
     fn refer_result(&self, nth_result: i32, msg: &tg::Message, ctx: &Context) {
@@ -124,7 +130,7 @@ impl BotExtension for Searcher {
 
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
         lazy_static! {
-            static ref ref_re: Regex = Regex::new(r"^/search_result_(\d+)$").unwrap();
+            static ref ref_re: Regex = Regex::new(r"^/search_result_(\d+)(@\w+bot)?$").unwrap();
         };
         if msg.is_cmd("search") {
             ctx.db.save_conf("history.last_search_args", msg.cmd_args("search"));

@@ -50,6 +50,8 @@ pub fn quote_str(s: &str) -> String {
     s.replace("'", "''")
 }
 
+pub const SEARCH_PER: usize = 10;
+
 impl Db {
     pub fn init() -> Self {
         // check file
@@ -117,28 +119,27 @@ impl Db {
     }
 
     pub fn search_msg<T: AsRef<str>>(&self, page: usize, patterns: &[T]) -> (usize, Vec<DbMessage>) {
-        const per: usize = 10;
         if patterns.is_empty() {
             return Default::default();
         }
         let query_sql = patterns.iter()
-            .map(|pat| format!("(text ilike '{}')",
+            .map(|pat| format!("text LIKE '{}'",
                                quote_str(pat.as_ref())))
             .collect::<Vec<String>>()
-            .join(" and ");
+            .join(" AND ");
 
         let query = messages::table
             .filter(messages::text.is_not_null())
-            .filter(messages::text.ne(""))
             .filter(sql(&query_sql));
         let count: i64 = query
             .clone()
             .count()
             .get_result(&*self.conn_ref())
             .unwrap_or_default();
+            debug!("{}", ((page - 1) * SEARCH_PER));
         let result = query
-            .offset(((page - 1) * per) as i64)
-            .limit(10)
+            .offset(((page - 1) * SEARCH_PER) as i64)
+            .limit(SEARCH_PER as i64)
             .load(&*self.conn_ref())
             .unwrap_or_default();
         (count as usize, result)
