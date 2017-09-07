@@ -63,6 +63,7 @@ fn main() {
     info!("Initializing plugin stack");
     ctx.plug_ext::<history::Saver>();
     ctx.plug_ext::<afk::Afk>();
+    ctx.plug_ext::<history::Searcher>();
     ctx.plug_ext::<tracker::Tracker>();
     ctx.plug_ext::<weather::Weather>();
     ctx.plug_ext::<manager::Manager>();

@@ -33,9 +33,10 @@ pub mod schema {
 
 use self::schema::*;
 
-#[derive(Insertable, Queryable)]
+#[derive(Insertable, Queryable, Serialize, Deserialize)]
 #[table_name="messages"]
 pub struct DbMessage {
+    pub id: Option<i32>,
     pub msg_id: i64,
     pub user_id: i64,
     pub chat_id: i64,
@@ -46,9 +47,7 @@ pub struct DbMessage {
 }
 
 pub fn quote_str(s: &str) -> String {
-    s.to_string()
-     .replace("'", "''")
-     .into()
+    s.replace("'", "''")
 }
 
 impl Db {
@@ -115,6 +114,34 @@ impl Db {
             .into(messages::table)
             .execute(&*self.conn_ref())
             .ok();
+    }
+
+    pub fn search_msg<T: AsRef<str>>(&self, page: usize, patterns: &[T]) -> (usize, Vec<DbMessage>) {
+        const per: usize = 10;
+        if patterns.is_empty() {
+            return Default::default();
+        }
+        let query_sql = patterns.iter()
+            .map(|pat| format!("(text ilike '{}')",
+                               quote_str(pat.as_ref())))
+            .collect::<Vec<String>>()
+            .join(" and ");
+
+        let query = messages::table
+            .filter(messages::text.is_not_null())
+            .filter(messages::text.ne(""))
+            .filter(sql(&query_sql));
+        let count: i64 = query
+            .clone()
+            .count()
+            .get_result(&*self.conn_ref())
+            .unwrap_or_default();
+        let result = query
+            .offset(((page - 1) * per) as i64)
+            .limit(10)
+            .load(&*self.conn_ref())
+            .unwrap_or_default();
+        (count as usize, result)
     }
 
     pub fn conn_ref(&self) -> Ref<SqliteConnection> {

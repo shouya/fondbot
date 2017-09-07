@@ -9,11 +9,14 @@ pub use serde_json::Value as JsonValue;
 pub use serde::de::Deserialize;
 pub use serde::ser::Serialize;
 pub use regex::Regex;
+pub use chrono;
 
 use std;
 pub use std::fmt;
+pub use std::fmt::Write;
 pub use std::sync::mpsc::{Sender, Receiver};
 pub use std::cell::{Cell, RefCell};
+pub use std::collections::HashMap;
 
 pub type Dict<T> = std::collections::BTreeMap<String, T>;
 
@@ -22,6 +25,10 @@ pub use context::Context;
 pub use self::telegram_bot as tg;
 pub use self::tg::Listener;
 pub use services::*;
+
+lazy_static! {
+    pub static ref GLOBAL_TIMEZONE: chrono::FixedOffset = chrono::FixedOffset::east(28800);
+}
 
 #[allow(unused_variables)]
 pub trait BotExtension {
