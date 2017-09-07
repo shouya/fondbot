@@ -43,6 +43,15 @@ pub trait BotExtension {
     }
 }
 
+pub fn escape_md(s: &str) -> String {
+    s.replace("_", "\\_")
+     .replace("[", "\\[")
+     .replace("*", "\\*")
+     .replace("]", "\\]")
+     .replace("(", "\\)")
+     .replace(")", "\\)")
+}
+
 // convert Result<T, E: Debug> to Result<T, String>
 pub type Result<T> = std::result::Result<T, String>;
 #[macro_export]

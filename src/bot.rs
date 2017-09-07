@@ -5,40 +5,65 @@ pub type Bot = tg::Api;
 
 pub trait TgApiExt {
     fn from_default_env() -> Self;
-    fn send_raw<T: Into<String>>(&self,
-                                 chat_id: Integer,
-                                 reply_to_msg_id: Option<Integer>,
-                                 txt: T,
-                                 parse_mode: Option<tg::ParseMode>)
-                                 -> Result<tg::Message>;
+    fn send_short_raw(&self, chat_id: Integer, reply_to_msg_id: Option<Integer>, txt: &str, parse_mode: Option<tg::ParseMode>) -> Result<tg::Message>;
     fn consume_updates(&self) -> usize;
     fn send_typing<T>(&self, chat: T) where T: Chattable;
 
-    fn reply_and_get_msg<R, T>(&self, msg: R, txt: T) -> Result<tg::Message>
+    fn send_raw(&self, chat_id: Integer, reply_to_msg_id: Option<Integer>, txt: &str, parse_mode: Option<tg::ParseMode>) -> Result<tg::Message> {
+        let txt = url_escape(txt);
+        if txt.chars().count() < 4096 {
+            self.send_short_raw(chat_id, reply_to_msg_id, &txt, parse_mode)
+        } else if txt.lines().count() <= 1 {
+            let init = txt.chars().take(4090).collect::<String>();
+            let rest = txt.chars().skip(4090).collect::<String>();
+            self.send_short_raw(chat_id, reply_to_msg_id, &init, parse_mode).ok();
+            self.send_short_raw(chat_id, reply_to_msg_id, &rest, parse_mode)
+        } else {
+            let mut acc_len = 0;
+            let mut buf = String::new();
+            for line in txt.lines() {
+                acc_len += line.chars().count() + 1;
+                if acc_len >= 4096 {
+                    break;
+                }
+                buf.push_str(&format!("{}\n", line));
+            }
+            let rest = &txt[buf.len()..];
+            if buf.is_empty() {
+                // first line very long
+                let mut lines = txt.lines();
+                let init = lines.next().unwrap();
+                let rest = lines.collect::<Vec<&str>>().concat();
+                self.send_raw(chat_id, reply_to_msg_id, init, parse_mode).ok();
+                self.send_raw(chat_id, reply_to_msg_id, &rest, parse_mode)
+            } else {
+                self.send_short_raw(chat_id, reply_to_msg_id, &buf,  parse_mode).ok();
+                self.send_raw(chat_id, reply_to_msg_id, &rest, parse_mode)
+            }
+        }
+    }
+
+    fn reply_and_get_msg<R>(&self, msg: R, txt: &str) -> Result<tg::Message>
         where R: Repliable,
-              T: Into<String>
     {
         self.send_raw(msg.chat_id(), msg.message_id(), txt, None)
     }
-    fn reply_md_and_get_msg<R, T>(&self,
-                                  msg: R,
-                                  md_txt: T)
-                                  -> Result<tg::Message>
+    fn reply_md_and_get_msg<R>(&self,
+                               msg: R,
+                               md_txt: &str)
+                               -> Result<tg::Message>
         where R: Repliable,
-              T: Into<String>
     {
         let markdown = Some(tg::ParseMode::Markdown);
         self.send_raw(msg.chat_id(), msg.message_id(), md_txt, markdown)
     }
-    fn reply_to<R, T>(&self, msg: R, txt: T)
-        where R: Repliable,
-              T: Into<String>
+    fn reply_to<R>(&self, msg: R, txt: &str)
+        where R: Repliable
     {
         self.send_raw(msg.chat_id(), msg.message_id(), txt, None).ok();
     }
-    fn reply_md_to<R, T>(&self, msg: R, md_txt: T)
-        where R: Repliable,
-              T: Into<String>
+    fn reply_md_to<R>(&self, msg: R, md_txt: &str)
+        where R: Repliable
     {
         let markdown = Some(tg::ParseMode::Markdown);
         self.send_raw(msg.chat_id(), msg.message_id(), md_txt, markdown).ok();
@@ -75,19 +100,18 @@ pub fn bot() -> Bot {
 /// ///////////////// implementing the extensions  ////////////////////
 
 
+fn url_escape(s: &str) -> String {
+    s.replace("%", "%25").replace("?", "%3F").replace("&", "%26")
+}
+
 impl TgApiExt for tg::Api {
     fn from_default_env() -> Self {
         Self::from_env("TELEGRAM_BOT_TOKEN").unwrap()
     }
 
-    fn send_raw<T: Into<String>>(&self,
-                                 chat_id: Integer,
-                                 reply_to_msg_id: Option<Integer>,
-                                 txt: T,
-                                 parse_mode: Option<tg::ParseMode>)
-                                 -> Result<tg::Message> {
+    fn send_short_raw(&self, chat_id: Integer, reply_to_msg_id: Option<Integer>, txt: &str, parse_mode: Option<tg::ParseMode>) -> Result<tg::Message> {
         let mut retry_count = 0;
-        let txt = txt.into();
+        let txt: String = txt.into();
         loop {
             let res = self.send_message(chat_id, // chat id
                                         txt.clone(), // txt

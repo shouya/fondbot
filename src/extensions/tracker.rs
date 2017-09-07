@@ -70,13 +70,13 @@ impl BotExtension for Tracker {
                 if let Some(tracking_no) = msg.cmd_arg("untrack") {
                     self.untrack(&tracking_no);
                     let body = format!("Tracker {} killed", &tracking_no);
-                    ctx.bot.reply_to(msg, body);
+                    ctx.bot.reply_to(msg, &body);
                 } else {
                     ctx.bot.reply_to(msg, "Usage: /untrack <tracking_no>");
                 }
             }
             "list" => {
-                ctx.bot.reply_md_to(msg, self.list());
+                ctx.bot.reply_md_to(msg, &self.list());
             }
             "query" => {
                 if let Some(tracking_no) = msg.cmd_arg("query") {
@@ -87,7 +87,7 @@ impl BotExtension for Tracker {
             }
             "cleanup" => {
                 let reply = format!("{}---\n{} entries removed.", self.list(), self.cleanup());
-                ctx.bot.reply_md_to(msg, reply);
+                ctx.bot.reply_md_to(msg, &reply);
             }
             _ => {
                 ctx.bot.reply_to(msg, "Invalid usage of tracker plugin");
@@ -299,7 +299,7 @@ impl ProgressTracker {
         let reply = (self.chat_id, self.last_msg_id.get());
         let body = self.progress_text();
 
-        if let Ok(msg) = self.bot().reply_md_and_get_msg(reply, body) {
+        if let Ok(msg) = self.bot().reply_md_and_get_msg(reply, &body) {
             self.last_msg_id.set(Some(msg.message_id));
         }
 

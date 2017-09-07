@@ -40,8 +40,8 @@ impl BotExtension for Saver {
         if msg.is_cmd("enable_search") {
             self.search_groups.push(msg.chat.id());
             ctx.db.save_conf("history.search_groups", self);
-            ctx.bot.reply_to(msg, format!("Chat {} added to search group",
-                                          msg.chat.id()));
+            ctx.bot.reply_to(msg, &format!("Chat {} added to search group",
+                                           msg.chat.id()));
             return;
         }
 
@@ -107,7 +107,7 @@ impl Searcher {
 
         ctx.db.save_conf("history.last_search_result", result);
 
-        ctx.bot.reply_to(msg, reply_buf);
+        ctx.bot.reply_to(msg, &reply_buf);
     }
 
     fn refer_result(&self, nth_result: i32, msg: &tg::Message, ctx: &Context) {

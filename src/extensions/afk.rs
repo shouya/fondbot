@@ -58,7 +58,7 @@ impl Afk {
                           duration,
                           reason);
 
-        bot.reply_md_to(msg, txt);
+        bot.reply_md_to(msg, &txt);
     }
 
     #[allow(unused_must_use)]

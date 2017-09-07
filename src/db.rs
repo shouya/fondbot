@@ -134,7 +134,6 @@ impl Db {
             .count()
             .get_result(&self.conn)
             .unwrap_or_default();
-            debug!("{}", ((page - 1) * SEARCH_PER));
         let result = query
             .offset(((page - 1) * SEARCH_PER) as i64)
             .limit(SEARCH_PER as i64)
