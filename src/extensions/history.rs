@@ -130,7 +130,7 @@ impl BotExtension for Searcher {
 
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
         lazy_static! {
-            static ref ref_re: Regex = Regex::new(r"^/search_result_(\d+)(@\w+bot)?$").unwrap();
+            static ref RE: Regex = Regex::new(r"^/search_result_(\d+)(@\w+bot)?$").unwrap();
         };
         if msg.is_cmd("search") {
             ctx.db.save_conf("history.last_search_args", msg.cmd_args("search"));
@@ -149,7 +149,7 @@ impl BotExtension for Searcher {
             return;
         } 
         let msg_txt = msg.msg_txt().unwrap_or_default();
-        let match_reference = ref_re.captures(&msg_txt);
+        let match_reference = RE.captures(&msg_txt);
         if let Some(caps) = match_reference {
             let n = caps.get(1).unwrap().as_str().parse::<i32>().unwrap();
             self.refer_result(n - 1, msg, ctx);
