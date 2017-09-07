@@ -8,12 +8,10 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json;
 
-use std::cell::{RefCell, Ref};
-
 const DB_FILE: &'static str = "data.db";
 
 pub struct Db {
-    conn: RefCell<SqliteConnection>
+    conn: SqliteConnection
 }
 
 pub mod schema {
@@ -57,7 +55,7 @@ impl Db {
         // check file
         let conn = SqliteConnection::establish(DB_FILE)
                       .unwrap();
-        let db = Db { conn: RefCell::new(conn) };
+        let db = Db { conn: conn };
         db.init_table_config();
         db.init_table_messages();
         db
@@ -100,21 +98,21 @@ impl Db {
     pub fn load_conf<T>(&self, key: &str) -> Option<T> where T: DeserializeOwned {
         sql::<Text>(&format!("SELECT value FROM config WHERE key = '{}'",
                              quote_str(key)))
-            .get_result::<String>(&*self.conn_ref())
+            .get_result::<String>(&self.conn)
             .ok()
             .and_then(|val_str| serde_json::from_str(&val_str).ok())
     }
 
     pub fn list_conf(&self) -> Vec<(String, String)> {
         sql::<(Text, Text)>("SELECT key, value FROM config")
-            .get_results(&*self.conn_ref())
+            .get_results(&self.conn)
             .unwrap_or_default()
     }
 
     pub fn save_msg(&self, msg: &DbMessage) {
         diesel::insert(msg)
             .into(messages::table)
-            .execute(&*self.conn_ref())
+            .execute(&self.conn)
             .ok();
     }
 
@@ -134,22 +132,18 @@ impl Db {
         let count: i64 = query
             .clone()
             .count()
-            .get_result(&*self.conn_ref())
+            .get_result(&self.conn)
             .unwrap_or_default();
             debug!("{}", ((page - 1) * SEARCH_PER));
         let result = query
             .offset(((page - 1) * SEARCH_PER) as i64)
             .limit(SEARCH_PER as i64)
-            .load(&*self.conn_ref())
+            .load(&self.conn)
             .unwrap_or_default();
         (count as usize, result)
     }
 
-    pub fn conn_ref(&self) -> Ref<SqliteConnection> {
-        self.conn.borrow()
-    }
-
     pub fn execute_sql(&self, s: &str) -> bool {
-        sql::<Bool>(s).execute(&*self.conn_ref()).is_ok()
+        sql::<Bool>(s).execute(&self.conn).is_ok()
     }
 }
