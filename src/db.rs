@@ -167,7 +167,7 @@ impl Db {
             .count()
             .get_result(&self.conn)
             .unwrap_or_default();
-            print_sql! {query.clone()};
+        print_sql! {query.clone()};
         let result = query
             .offset(((page - 1) * SEARCH_PER) as i64)
             .limit(SEARCH_PER as i64)

@@ -5,8 +5,8 @@ use chrono::{DateTime, NaiveDateTime};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Saver {
-    search_groups: Vec<Integer>,
-    search_users: Vec<Integer>,
+    search_groups: HashSet<Integer>,
+    search_users: HashSet<Integer>,
 }
 
 #[derive(Debug, Clone, Default)]
