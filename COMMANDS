@@ -1,7 +1,8 @@
 afk - [reason] - set afk
 noafk - no afk
 search - <pattern> [pattern...] - search through history
-enable_search - enable recording history and searching in this group
+enable_search_for_group - enable recording history and searching in this group
+enable_search_for_me - enable search for my messages
 weather - check weather
 track - <tracking_no>
 untrack - <tracking_no>

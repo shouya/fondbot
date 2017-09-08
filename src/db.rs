@@ -7,11 +7,13 @@ use diesel::types::{Bool, Text};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json;
+use chrono::prelude::Utc;
+use std;
 
 const DB_FILE: &'static str = "data.db";
 
 pub struct Db {
-    conn: SqliteConnection
+    conn: SqliteConnection,
 }
 
 pub mod schema {
@@ -34,7 +36,7 @@ pub mod schema {
 use self::schema::*;
 
 #[derive(Insertable, Queryable, Serialize, Deserialize)]
-#[table_name="messages"]
+#[table_name = "messages"]
 pub struct DbMessage {
     pub id: Option<i32>,
     pub msg_id: i64,
@@ -45,7 +47,7 @@ pub struct DbMessage {
     pub is_group: bool,
     pub reply_to_msg_id: Option<i64>,
     pub text: Option<String>,
-    pub created_at: Option<i64>
+    pub created_at: Option<i64>,
 }
 
 pub fn quote_str(s: &str) -> String {
@@ -57,8 +59,7 @@ pub const SEARCH_PER: usize = 10;
 impl Db {
     pub fn init() -> Self {
         // check file
-        let conn = SqliteConnection::establish(DB_FILE)
-                      .unwrap();
+        let conn = SqliteConnection::establish(DB_FILE).unwrap();
         let db = Db { conn: conn };
         db.init_table_config();
         db.init_table_messages();
@@ -71,7 +72,8 @@ impl Db {
                 id INTEGER PRIMARY KEY ASC,
                 key TEXT UNIQUE,
                 value TEXT
-             );");
+             );",
+        );
     }
 
     pub fn init_table_messages(&self) {
@@ -88,23 +90,35 @@ impl Db {
                 text TEXT,
                 created_at BIGINT,
                 UNIQUE(msg_id, chat_id) ON CONFLICT IGNORE
-             );");
+             );",
+        );
     }
 
-    pub fn save_conf<T>(&self, key: &str, value: T) where T: Serialize {
+    pub fn save_conf<T>(&self, key: &str, value: T)
+    where
+        T: Serialize,
+    {
         let value_str = serde_json::to_string_pretty(&value).unwrap();
-        self.execute_sql(
-            &format!("INSERT INTO config (key,value) VALUES('{}', '{}')",
-                     quote_str(&key), quote_str(&value_str)))
-        || self.execute_sql(
-            &format!("UPDATE config SET value = '{}' WHERE key = '{}'",
-                     quote_str(&value_str), quote_str(key)));
+        self.execute_sql(&format!(
+            "INSERT INTO config (key,value) VALUES('{}', '{}')",
+            quote_str(&key),
+            quote_str(&value_str)
+        )) ||
+            self.execute_sql(&format!(
+                "UPDATE config SET value = '{}' WHERE key = '{}'",
+                quote_str(&value_str),
+                quote_str(key)
+            ));
     }
 
-    pub fn load_conf<T>(&self, key: &str) -> Option<T> where T: DeserializeOwned {
-        sql::<Text>(&format!("SELECT value FROM config WHERE key = '{}'",
-                             quote_str(key)))
-            .get_result::<String>(&self.conn)
+    pub fn load_conf<T>(&self, key: &str) -> Option<T>
+    where
+        T: DeserializeOwned,
+    {
+        sql::<Text>(&format!(
+            "SELECT value FROM config WHERE key = '{}'",
+            quote_str(key)
+        )).get_result::<String>(&self.conn)
             .ok()
             .and_then(|val_str| serde_json::from_str(&val_str).ok())
     }
@@ -122,25 +136,38 @@ impl Db {
             .ok();
     }
 
-    pub fn search_msg<T: AsRef<str>>(&self, page: usize, patterns: &[T]) -> (usize, Vec<DbMessage>) {
+    pub fn search_msg<T: AsRef<str>>(
+        &self,
+        page: usize,
+        patterns: &[T],
+        users: &[i64],
+    ) -> (usize, Vec<DbMessage>) {
         if patterns.is_empty() {
             return Default::default();
         }
-        let query_sql = patterns.iter()
-            .map(|pat| format!("text LIKE '{}'",
-                               quote_str(pat.as_ref())))
+        let msg_filter_sql = patterns
+            .iter()
+            .map(|pat| format!("text LIKE '{}'", quote_str(pat.as_ref())))
             .collect::<Vec<String>>()
             .join(" AND ");
+        let user_filter_sql = users
+            .iter()
+            .chain(std::iter::once(&-1))
+            .map(|i| format!("user_id = {}", i))
+            .collect::<Vec<String>>()
+            .join(" OR ");
 
         let query = messages::table
-            .filter(messages::text.is_not_null())
-            .filter(sql(&query_sql))
+            .filter(sql(&msg_filter_sql))
+            .filter(sql(&user_filter_sql))
+            .filter(messages::created_at.lt(Utc::now().timestamp() - 60))
             .order(messages::created_at.desc());
         let count: i64 = query
             .clone()
             .count()
             .get_result(&self.conn)
             .unwrap_or_default();
+            print_sql! {query.clone()};
         let result = query
             .offset(((page - 1) * SEARCH_PER) as i64)
             .limit(SEARCH_PER as i64)

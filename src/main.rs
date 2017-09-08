@@ -22,6 +22,7 @@ mod context;
 mod bot;
 mod services;
 mod tg_logger;
+mod util;
 
 use common::*;
 use extensions::*;

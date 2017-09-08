@@ -21,6 +21,7 @@ pub use std::clone::Clone;
 
 pub type Dict<T> = std::collections::BTreeMap<String, T>;
 
+pub use util::*;
 pub use bot::*;
 pub use context::Context;
 pub use self::telegram_bot as tg;
@@ -43,16 +44,6 @@ pub trait BotExtension {
         self.name().into()
     }
 }
-
-pub fn escape_md(s: &str) -> String {
-    s.replace("_", "\\_")
-     .replace("[", "\\[")
-     .replace("*", "\\*")
-     .replace("]", "\\]")
-     .replace("(", "\\)")
-     .replace(")", "\\)")
-}
-
 // convert Result<T, E: Debug> to Result<T, String>
 pub type Result<T> = std::result::Result<T, String>;
 #[macro_export]
