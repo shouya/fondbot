@@ -159,7 +159,7 @@ impl Db {
 
         let query = messages::table
             .filter(sql(&msg_filter_sql))
-            .filter(sql(&user_filter_sql))
+            .filter(sql(&format!("({})", user_filter_sql)))
             .filter(messages::created_at.lt(Utc::now().timestamp() - 60))
             .order(messages::created_at.desc());
         let count: i64 = query
