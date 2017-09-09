@@ -25,7 +25,7 @@ impl BotExtension for Manager {
                      .map(|(k,v)| config::format_config_item(&k, &v))
                      .collect::<Vec<String>>()
                      .join("---\n")).ok();
-            ctx.bot.reply_to(msg, &buf);
+            ctx.bot.reply_to(msg, buf);
         }
     }
 

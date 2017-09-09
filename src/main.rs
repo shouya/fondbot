@@ -9,11 +9,15 @@
 
 extern crate slog_term;
 extern crate dotenv;
+extern crate futures;
+extern crate tokio_core;
+
 
 pub extern crate serde;
 pub extern crate serde_json;
 pub extern crate chrono;
 
+pub mod tg;
 mod db;
 mod common;
 mod extensions;
@@ -54,10 +58,12 @@ fn main() {
     setup_logger();
 
     let bot = Bot::from_default_env();
-    info!("Running as {:?}", bot.get_me());
+    // info!("Running as {:?}", bot.get_me());
+
+    bot.spawn(tg::SendMessage::new(tg::ChatId::new(48273646), "WHAT!"));
 
     info!("Eating up all previous messages!");
-    info!("Consumed {} messages", bot.consume_updates());
+    // info!("Consumed {} messages", bot.consume_updates());
 
     info!("Initializing bot context");
     let mut ctx = Context::new(bot);
@@ -65,7 +71,6 @@ fn main() {
     ctx.plug_ext::<history::Saver>();
     ctx.plug_ext::<afk::Afk>();
     ctx.plug_ext::<history::Searcher>();
-    ctx.plug_ext::<tracker::Tracker>();
     ctx.plug_ext::<weather::Weather>();
     ctx.plug_ext::<manager::Manager>();
 

@@ -1,6 +1,7 @@
 use common::*;
 use ext_stack::ExtensionStack;
 use db::Db;
+use tokio_core;
 
 use std::collections::HashSet;
 use std::cell::{Cell, RefCell};
@@ -16,14 +17,15 @@ pub struct Context {
     pub exts: RefCell<ExtensionStack>,
     pub db: Db,
     pub bypass: Cell<bool>,
-    pub bot_user: tg::User
+    pub tokio_core: tokio_core::reactor::Core,
+    pub bot_user: tg::User,
 }
 
 impl Context {
     pub fn context_state(&self) -> ContextState {
         match self.db.load_conf("context-state") {
             None => Default::default(),
-            Some(x) => x
+            Some(x) => x,
         }
     }
 
@@ -34,7 +36,8 @@ impl Context {
     }
 
     pub fn plug_ext<T>(&mut self)
-        where T: BotExtension + 'static
+    where
+        T: BotExtension + 'static,
     {
         let plugin = T::init(&self);
         info!("Loading plugin {}", plugin.name());
@@ -46,13 +49,15 @@ impl Context {
     }
 
     pub fn new(bot: tg::Api) -> Context {
-        let bot_user = bot.get_me().unwrap();
+        // let bot_user = bot.get_me();
+        let core = tokio_core::reactor::Core::new().unwrap();
         Context {
             bot: bot,
             exts: RefCell::new(ExtensionStack::new()),
             db: Db::init(),
             bypass: Cell::new(false),
-            bot_user: bot_user
+            tokio_core: core,
+            bot_user: tg::User { id: tg::UserId::new(0), first_name: "".into(), last_name: None, username: None } //bot_user,,
         }
     }
 
@@ -65,7 +70,7 @@ impl Context {
     }
 
     pub fn safety_guard(&self, msg: &tg::Message) -> bool {
-        let chat_id = msg.chat.id();
+        let chat_id = msg.to_source_chat().into();
         self.context_state().safe_chats.contains(&chat_id)
     }
 
@@ -73,9 +78,11 @@ impl Context {
         if self.safety_guard(msg) {
             self.exts_process_message(msg);
         } else {
-            self.bot.reply_to(msg,
-                              "Unauthorized access. This incidence will be \
-                               reported to administrator.");
+            self.bot.reply_to(
+                &msg,
+                "Unauthorized access. This incidence will be \
+                               reported to administrator.",
+            );
             // TODO: Report event
         }
     }
@@ -94,18 +101,26 @@ impl Context {
     }
 
     pub fn serve(&mut self) {
-        let mut listener = {
-            self.bot.listener(tg::ListeningMethod::LongPoll(None))
-        };
+        use futures::Stream;
+        use tg::UpdateKind::Message;
+        use tokio_core;
+        let mut core = tokio_core::reactor::Core::new().unwrap();
 
-        listener.listen(move |u| {
-                debug!("Got msg: {:?}", u);
-                if let Some(mut msg) = u.message {
+        let future = self.bot.stream().for_each(|update| {
+            debug!("Got update: {:?}", update);
+            match update.kind {
+                Message(msg) => {
+                    let mut msg = msg.clone();
                     msg.clean_cmd();
-                    self.process_message(&msg);
+                    if msg.is_processable() {
+                        self.process_message(&msg);
+                    }
                 }
-                Ok(tg::ListeningAction::Continue)
-            })
-            .unwrap();
+                _ => {}
+            };
+            Ok(())
+        });
+
+        core.run(future).unwrap();
     }
 }

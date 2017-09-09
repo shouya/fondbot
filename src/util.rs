@@ -16,3 +16,7 @@ pub fn escape_md(s: &str) -> String {
         .replace("(", "\\)")
         .replace(")", "\\)")
 }
+
+pub fn url_escape(s: &str) -> String {
+    s.replace("%", "%25").replace("?", "%3F").replace("&", "%26")
+}

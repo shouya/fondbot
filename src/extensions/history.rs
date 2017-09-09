@@ -14,27 +14,25 @@ pub struct Searcher;
 
 fn chat_name(chat: &tg::Chat) -> String {
     match *chat {
-        tg::Chat::Private { .. } => "private chat".into(),
-        tg::Chat::Group { ref title, .. } => title.clone(),
-        tg::Chat::Channel { ref name, .. } => {
-            name.as_ref().map(|x| x.clone()).unwrap_or(
-                "a channel".into(),
-            )
-        }
+        tg::Chat::Private(_) => "private chat".into(),
+        tg::Chat::Group(ref group) => group.title.clone(),
+        tg::Chat::Supergroup(ref group) => group.title.clone(),
+        tg::Chat::Channel(ref chan) => chan.title.clone(),
+        _ => "".into(),
     }
 }
 
 fn to_db_message(msg: &tg::Message) -> DbMessage {
     DbMessage {
         id: None,
-        msg_id: msg.message_id,
-        user_id: msg.from.id,
-        user_name: Some(msg.from.user_name()),
-        chat_id: msg.chat.id(),
+        msg_id: msg.id_i64(),
+        user_id: msg.from.as_ref().map(|x| x.id.into()).unwrap_or(-1i64),
+        user_name: Some(msg.from_user_name()),
+        chat_id: msg.chat_id_i64(),
         chat_name: Some(chat_name(&msg.chat)),
-        is_group: msg.chat.is_group() || msg.chat.is_supergroup(),
-        reply_to_msg_id: msg.reply.as_ref().map(|ref x| x.message_id),
-        text: msg.msg_txt(),
+        is_group: msg.is_to_group(),
+        reply_to_msg_id: msg.reply_to_message.as_ref().map(|ref x| x.id_i64()),
+        text: msg.text(),
         created_at: Some(msg.date),
     }
 }
@@ -55,35 +53,35 @@ impl BotExtension for Saver {
 
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
         if msg.is_cmd("enable_search_for_group") {
-            self.search_groups.push(msg.chat.id());
+            self.search_groups.insert(msg.chat_id_i64());
             ctx.db.save_conf(
                 "history.search_groups",
                 &self.search_groups,
             );
             ctx.bot.reply_to(
                 msg,
-                &format!("Chat {} added to search group", msg.chat.id()),
+                format!("Chat {} added to search group", msg.chat.id()),
             );
             return;
         }
         if msg.is_cmd("enable_search_for_me") {
-            self.search_users.push(msg.from.id);
+            self.search_users.insert(msg.from_id_i64().unwrap_or(0));
             ctx.db.save_conf("history.search_users", &self.search_users);
             ctx.bot.reply_to(
                 msg,
-                &format!(
+                format!(
                     "You ({}) have been added to search users",
-                    msg.from.user_name()
+                    msg.from_user_name()
                 ),
             );
             return;
         }
 
-        if !self.search_groups.contains(&msg.chat.id()) {
+        if !self.search_groups.contains(&msg.chat_id_i64()) {
             return;
         }
 
-        if msg.msg_txt().is_none() {
+        if msg.text().is_none() {
             // we only want to search text messages
             return;
         }
@@ -149,7 +147,8 @@ impl Searcher {
                 ),
                 ellipsis(
                     &message.chat_name.as_ref().map(Clone::clone).unwrap_or(
-                        "some chat".into(),
+                        "some chat"
+                            .into(),
                     ),
                     10,
                 ),
@@ -168,7 +167,7 @@ impl Searcher {
 
         ctx.db.save_conf("history.last_search_result", result);
 
-        ctx.bot.reply_to(msg, &reply_buf);
+        ctx.bot.reply_to(msg, reply_buf);
     }
 
     fn refer_result(&self, nth_result: i32, msg: &tg::Message, ctx: &Context) {
@@ -177,8 +176,10 @@ impl Searcher {
             .unwrap_or_default();
         let result = last_results.iter().nth(nth_result as usize);
         if let Some(dbmsg) = result {
-            let repliable = (dbmsg.chat_id, dbmsg.msg_id);
-            ctx.bot.reply_to(repliable, "Here you go");
+            ctx.bot.spawn(&tg::SendMessage::new(
+                tg::ChatId::new(dbmsg.chat_id),
+                "Here you go",
+            ).reply_to(tg::MessageId::new(dbmsg.msg_id)));
         } else {
             ctx.bot.reply_to(msg, "Unable to find message");
         }
@@ -194,6 +195,10 @@ impl BotExtension for Searcher {
         lazy_static! {
             static ref RE: Regex = Regex::new(r"^/ref_(\d+)(@\w+bot)?$").unwrap();
         };
+        let text = msg.text();
+        if text.is_none() {
+            return;
+        }
         if msg.is_cmd("search") {
             ctx.db.save_conf(
                 "history.last_search_args",
@@ -217,8 +222,8 @@ impl BotExtension for Searcher {
             self.search(msg, ctx);
             return;
         }
-        let msg_txt = msg.msg_txt().unwrap_or_default();
-        let match_reference = RE.captures(&msg_txt);
+        let text_bang = text.unwrap();
+        let match_reference = RE.captures(&text_bang);
         if let Some(caps) = match_reference {
             let n = caps.get(1).unwrap().as_str().parse::<i32>().unwrap();
             self.refer_result(n - 1, msg, ctx);

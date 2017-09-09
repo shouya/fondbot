@@ -55,7 +55,7 @@ impl Weather {
                 Ok(w) => write!(out, "{}\n", w).ok(),
                 Err(e) => write!(out, "Error: {}\n", e).ok(),
             };
-            bot().reply_md_to(msg, &out);
+            bot().reply_md_to(msg, out);
         }
     }
 }

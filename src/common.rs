@@ -1,6 +1,4 @@
 #![macro_use]
-
-pub extern crate telegram_bot;
 pub extern crate erased_serde;
 pub extern crate regex;
 
@@ -12,21 +10,21 @@ pub use regex::Regex;
 pub use chrono;
 
 use std;
+pub use std::env;
 pub use std::fmt;
 pub use std::fmt::Write;
 pub use std::sync::mpsc::{Sender, Receiver};
 pub use std::cell::{Cell, RefCell};
 pub use std::collections::{HashSet, HashMap};
 pub use std::clone::Clone;
-
-pub type Dict<T> = std::collections::BTreeMap<String, T>;
+pub use std::borrow::Cow;
 
 pub use util::*;
 pub use bot::*;
 pub use context::Context;
-pub use self::telegram_bot as tg;
-pub use self::tg::Listener;
 pub use services::*;
+pub use tg;
+pub use tg::traits::*;
 
 lazy_static! {
     pub static ref GLOBAL_TIMEZONE: chrono::FixedOffset = chrono::FixedOffset::east(28800);
