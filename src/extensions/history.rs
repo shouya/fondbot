@@ -55,7 +55,7 @@ impl BotExtension for Saver {
 
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
         if msg.is_cmd("enable_search_for_group") {
-            self.search_groups.push(msg.chat.id());
+            self.search_groups.insert(msg.chat.id());
             ctx.db.save_conf(
                 "history.search_groups",
                 &self.search_groups,
@@ -67,7 +67,7 @@ impl BotExtension for Saver {
             return;
         }
         if msg.is_cmd("enable_search_for_me") {
-            self.search_users.push(msg.from.id);
+            self.search_users.insert(msg.from.id);
             ctx.db.save_conf("history.search_users", &self.search_users);
             ctx.bot.reply_to(
                 msg,
