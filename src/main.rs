@@ -60,7 +60,7 @@ fn main() {
     // DEBUG
     dotenv::dotenv().ok();
 
-    // so make sure the logger lives long enough
+    // make sure the logger lives long enough
     let _guard = setup_logger();
 
     let bot = Bot::from_default_env();

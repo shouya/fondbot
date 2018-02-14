@@ -16,11 +16,9 @@ fn chat_name(chat: &tg::Chat) -> String {
     match *chat {
         tg::Chat::Private { .. } => "private chat".into(),
         tg::Chat::Group { ref title, .. } => title.clone(),
-        tg::Chat::Channel { ref name, .. } => {
-            name.as_ref().map(|x| x.clone()).unwrap_or(
-                "a channel".into(),
-            )
-        }
+        tg::Chat::Channel { ref name, .. } => name.as_ref()
+            .map(|x| x.clone())
+            .unwrap_or("a channel".into()),
     }
 }
 
@@ -56,10 +54,8 @@ impl BotExtension for Saver {
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
         if msg.is_cmd("enable_search_for_group") {
             self.search_groups.insert(msg.chat.id());
-            ctx.db.save_conf(
-                "history.search_groups",
-                &self.search_groups,
-            );
+            ctx.db
+                .save_conf("history.search_groups", &self.search_groups);
             ctx.bot.reply_to(
                 msg,
                 &format!("Chat {} added to search group", msg.chat.id()),
@@ -85,10 +81,18 @@ impl BotExtension for Saver {
 
         if msg.msg_txt().is_none() {
             // we only want to search text messages
+            trace!("history: Message not saved: not text");
+            return;
+        }
+
+        if msg.msg_txt().unwrap().chars().count() >= 400 {
+            // we don't like message too long
+            trace!("history: Message not saved: too long");
             return;
         }
 
         ctx.db.save_msg(&to_db_message(msg));
+        trace!("history: Message saved");
     }
 
     fn name(&self) -> &str {
@@ -112,8 +116,8 @@ impl Searcher {
             ctx.bot.reply_md_to(
                 msg,
                 "Usage: search <pattern> [pattern...]\n\
-                                      Patterns:\n    \
-                                      *: matches any string",
+                 Patterns:\n    \
+                 *: matches any string",
             );
             return;
         }
@@ -128,9 +132,11 @@ impl Searcher {
         writeln!(&mut reply_buf, "Searching for: {}", args.join(" ")).ok();
 
         if count == 0 {
-            writeln!(&mut reply_buf,
-                     "No matching result found (try search for '*{}*'?)",
-                     args.join(""));
+            writeln!(
+                &mut reply_buf,
+                "No matching result found (try search for '*{}*'?)",
+                args.join("")
+            ).ok();
             ctx.bot.reply_to(msg, &reply_buf);
             return;
         }
@@ -151,15 +157,19 @@ impl Searcher {
                 i + 1,
                 format_time(message.created_at),
                 ellipsis(
-                    &message.user_name.as_ref().map(Clone::clone).unwrap_or(
-                        "someone".into(),
-                    ),
+                    &message
+                        .user_name
+                        .as_ref()
+                        .map(Clone::clone,)
+                        .unwrap_or("someone".into(),),
                     10,
                 ),
                 ellipsis(
-                    &message.chat_name.as_ref().map(Clone::clone).unwrap_or(
-                        "some chat".into(),
-                    ),
+                    &message
+                        .chat_name
+                        .as_ref()
+                        .map(Clone::clone,)
+                        .unwrap_or("some chat".into(),),
                     10,
                 ),
                 message.text.clone().unwrap_or_default()
@@ -204,10 +214,8 @@ impl BotExtension for Searcher {
             static ref RE: Regex = Regex::new(r"^/ref_(\d+)(@\w+bot)?$").unwrap();
         };
         if msg.is_cmd("search") {
-            ctx.db.save_conf(
-                "history.last_search_args",
-                msg.cmd_args("search"),
-            );
+            ctx.db
+                .save_conf("history.last_search_args", msg.cmd_args("search"));
             ctx.db.save_conf("history.last_search_page", 1);
             self.search(msg, ctx);
             return;

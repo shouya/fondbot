@@ -16,14 +16,14 @@ pub struct Context {
     pub exts: RefCell<ExtensionStack>,
     pub db: Db,
     pub bypass: Cell<bool>,
-    pub bot_user: tg::User
+    pub bot_user: tg::User,
 }
 
 impl Context {
     pub fn context_state(&self) -> ContextState {
         match self.db.load_conf("context-state") {
             None => Default::default(),
-            Some(x) => x
+            Some(x) => x,
         }
     }
 
@@ -34,7 +34,8 @@ impl Context {
     }
 
     pub fn plug_ext<T>(&mut self)
-        where T: BotExtension + 'static
+    where
+        T: BotExtension + 'static,
     {
         let plugin = T::init(&self);
         info!("Loading plugin {}", plugin.name());
@@ -46,13 +47,15 @@ impl Context {
     }
 
     pub fn new(bot: tg::Api) -> Context {
-        let bot_user = bot.get_me().unwrap();
+        let retry_interval = Duration::from_millis(2000);
+        let bot_user =
+            auto_retry(|| bot.get_me(), None, Some(retry_interval)).unwrap();
         Context {
             bot: bot,
             exts: RefCell::new(ExtensionStack::new()),
             db: Db::init(),
             bypass: Cell::new(false),
-            bot_user: bot_user
+            bot_user: bot_user,
         }
     }
 
@@ -73,9 +76,11 @@ impl Context {
         if self.safety_guard(msg) {
             self.exts_process_message(msg);
         } else {
-            self.bot.reply_to(msg,
-                              "Unauthorized access. This incidence will be \
-                               reported to administrator.");
+            self.bot.reply_to(
+                msg,
+                "Unauthorized access. This incidence will be \
+                 reported to administrator.",
+            );
             // TODO: Report event
         }
     }
@@ -94,11 +99,11 @@ impl Context {
     }
 
     pub fn serve(&mut self) {
-        let mut listener = {
-            self.bot.listener(tg::ListeningMethod::LongPoll(None))
-        };
+        let mut listener =
+            { self.bot.listener(tg::ListeningMethod::LongPoll(None)) };
 
-        listener.listen(move |u| {
+        listener
+            .listen(move |u| {
                 debug!("Got msg: {:?}", u);
                 if let Some(mut msg) = u.message {
                     msg.clean_cmd();

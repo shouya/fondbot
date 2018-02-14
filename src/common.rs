@@ -18,6 +18,7 @@ pub use std::sync::mpsc::{Sender, Receiver};
 pub use std::cell::{Cell, RefCell};
 pub use std::collections::{HashSet, HashMap};
 pub use std::clone::Clone;
+pub use std::time::Duration;
 
 pub type Dict<T> = std::collections::BTreeMap<String, T>;
 
