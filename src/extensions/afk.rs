@@ -21,7 +21,7 @@ pub struct Afk {
 impl Afk {
     fn set_afk(&mut self, msg: &tg::Message) {
         self.who = Some(msg.from.id);
-        self.name = Some(msg.from.user_name());
+        self.name = Some(msg.from.formal_name());
         self.afk_at = Some(Self::now());
         self.reason = msg.cmd_arg("afk");
         self.last_notify = Some(Self::now() - notify_interval());

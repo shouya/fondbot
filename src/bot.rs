@@ -106,6 +106,7 @@ pub trait TgMessageExt {
 
 pub trait TgUserExt {
     fn user_name(&self) -> String;
+    fn formal_name(&self) -> String;
 }
 
 pub trait Chattable {
@@ -266,12 +267,16 @@ impl<'a> TgMessageExt for tg::Message {
 
 impl TgUserExt for tg::User {
     fn user_name(&self) -> String {
-        let user = self.clone();
-        let add_space = |x: String| " ".to_string() + &x;
-        let last_name = user.last_name.map_or("".into(), add_space);
-        let formal_name = user.first_name + &last_name;
+        self.username.clone().unwrap_or(self.formal_name())
+    }
 
-        user.username.unwrap_or(formal_name)
+    fn formal_name(&self) -> String {
+        let mut name = self.first_name.clone();
+        if self.last_name.is_some() {
+            name += " ";
+            name += &self.first_name;
+        }
+        name
     }
 }
 
