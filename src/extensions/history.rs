@@ -86,7 +86,13 @@ impl BotExtension for Saver {
             return;
         }
 
-        if msg.msg_txt().unwrap().chars().count() >= 400 {
+        let msg_text = msg.msg_txt().unwrap();
+
+        if msg_text.starts_with("/") {
+            trace!("history: Message not saved: bot command")
+        }
+
+        if msg_text.chars().count() >= 400 {
             // we don't like message too long
             trace!("history: Message not saved: too long");
             return;
