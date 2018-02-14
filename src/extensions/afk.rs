@@ -53,12 +53,12 @@ impl Afk {
         let duration = Self::format_duration(&duration);
         let reason = self.reason.clone().unwrap_or("[not given]".into());
 
-        let txt = format!("{} is *AFK* now.\nAFK set time: _{}, {} \
-                           ago_\n*Reason*: {}",
-                          name,
-                          afk_at,
-                          duration,
-                          reason);
+        let txt = format!(
+            "{} is *AFK* now.\n\
+             AFK set time: _{}, {} ago_\n\
+             *Reason*: {}",
+            name, afk_at, duration, reason
+        );
 
         bot.reply_md_to(msg, &txt);
     }
@@ -100,7 +100,6 @@ impl Afk {
         self.afk_at.is_some()
     }
 }
-
 
 impl BotExtension for Afk {
     fn init(ctx: &Context) -> Self {
