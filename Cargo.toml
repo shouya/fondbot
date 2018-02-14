@@ -17,10 +17,10 @@ env_logger = "*"
 hyper = "0.9.14"
 regex = "*"
 lazy_static = "*"
-slog = { version = "1.5.2", features = ["max_level_trace"] }
-slog-scope = "0.2.2"
-slog-extra = "0.1.2"
-slog-term = "1.5.0"
+slog = { version = "2.1.1", features = ["max_level_trace"] }
+slog-scope = "4.0.1"
+slog-async = "2.2.0"
+slog-term = "2.3.0"
 diesel = { version = "0.15.0", features = ["sqlite", "chrono"] }
 diesel_codegen = { version = "0.15.0", features = ["sqlite"] }
 

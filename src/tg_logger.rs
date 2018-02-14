@@ -1,21 +1,20 @@
-extern crate slog_extra;
 
 use telegram_bot;
-use telegram_bot::Api;
-use slog::{Drain, Record, OwnedKeyValueList};
-use self::slog_extra::Async;
+use slog::{Drain, Record, OwnedKVList};
+use slog::Never;
 
 pub struct TgDrain {
-    api: Api,
+    token: String,
     chat_id: i64,
 }
 
 impl Drain for TgDrain {
-    type Error = ();
+    type Ok = ();
+    type Err = Never;
     fn log(&self,
            info: &Record,
-           options: &OwnedKeyValueList)
-           -> Result<(), ()> {
+           options: &OwnedKVList)
+           -> Result<Self::Ok, Self::Err> {
         let text = format_log(info, options).clone();
         self.send_message(text);
         Ok(())
@@ -24,18 +23,17 @@ impl Drain for TgDrain {
 
 
 impl TgDrain {
-    pub fn new(api_token: &str, chat_id: i64) -> Async {
-        let api = telegram_bot::Api::from_token(api_token.into()).unwrap();
-        Async::new(TgDrain {
-            api: api,
+    pub fn new(api_token: &str, chat_id: i64) -> Self {
+        TgDrain {
+            token: api_token.into(),
             chat_id: chat_id,
-        })
+        }
     }
 
     pub fn send_message(&self, text: String) {
         let chat_id = self.chat_id;
-        self.api
-            .send_message(chat_id,
+        let api = telegram_bot::Api::from_token(&self.token).unwrap();
+        api.send_message(chat_id,
                           text,
                           Some(telegram_bot::ParseMode::Html),
                           Some(true),
@@ -45,7 +43,7 @@ impl TgDrain {
     }
 }
 
-fn format_log(info: &Record, _: &OwnedKeyValueList) -> String {
+fn format_log(info: &Record, _: &OwnedKVList) -> String {
     format!("<code>[{}]{}{}:</code> {}",
             info.level().as_short_str(),
             info.module(),

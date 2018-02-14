@@ -8,6 +8,7 @@
 #[macro_use] extern crate diesel;
 
 extern crate slog_term;
+extern crate slog_async;
 extern crate dotenv;
 
 pub extern crate serde;
@@ -27,18 +28,26 @@ mod util;
 use common::*;
 use extensions::*;
 
-fn setup_logger() {
-    use slog::{DrainExt, Level, LevelFilter};
+fn setup_logger() -> slog_scope::GlobalLoggerGuard {
+    use slog::*;
+    use slog_term::{FullFormat, TermDecorator};
+    use slog_async::Async;
+
     let api_token = std::env::var("TELEGRAM_BOT_TOKEN").unwrap();
     let log_channel =
         std::env::var("TELEGRAM_LOG_CHANNEL").unwrap().parse::<i64>().unwrap();
     let tg_drain = tg_logger::TgDrain::new(&api_token, log_channel);
-    let tg_drain_filtered = LevelFilter::new(tg_drain, Level::Warning);
+    let tg_drain = LevelFilter::new(tg_drain, Level::Warning).fuse();
+    let tg_drain = Async::new(tg_drain).build().fuse();
 
-    let term_drain = slog_term::streamer().build().fuse();
-    let dup_drain = slog::Duplicate::new(tg_drain_filtered, term_drain);
-    let root_logger = slog::Logger::root(dup_drain.ignore_err(), o![]);
-    slog_scope::set_global_logger(root_logger);
+
+    let decorator = TermDecorator::new().build();
+    let term_drain = FullFormat::new(decorator).build().fuse();
+    let term_drain = Async::new(term_drain).build().fuse();
+
+    let dup_drain = slog::Duplicate::new(tg_drain, term_drain).fuse();
+    let root_logger = slog::Logger::root(dup_drain, o![]);
+    slog_scope::set_global_logger(root_logger)
 }
 
 const DEBUG: bool = false;
@@ -51,10 +60,11 @@ fn main() {
     // DEBUG
     dotenv::dotenv().ok();
 
-    setup_logger();
+    // so make sure the logger lives long enough
+    let _guard = setup_logger();
 
     let bot = Bot::from_default_env();
-    info!("Running as {:?}", bot.get_me());
+    info!("Running as {:?}", auto_retry(|| bot.get_me(), None, None));
 
     info!("Eating up all previous messages!");
     info!("Consumed {} messages", bot.consume_updates());
