@@ -117,7 +117,7 @@ impl Searcher {
             ctx.bot.reply_md_to(
                 msg,
                 "Usage: `/search <pattern>`\n\
-                 Wildcard '*' in <pattern> matches any string.\n"
+                 Wildcard '*' in <pattern> matches any string.\n",
             );
             return;
         }
@@ -130,13 +130,14 @@ impl Searcher {
         writeln!(&mut reply_buf, "Searching for: {}", pattern).ok();
 
         if count == 0 {
-            writeln!(
-                &mut reply_buf,
-                "No matching result found"
-            ).ok();
+            writeln!(&mut reply_buf, "No matching result found").ok();
 
             if !pattern.starts_with("*") && !pattern.ends_with("*") {
-                writeln!(&mut reply_buf, "Hint: try search for '*{}*'", pattern).ok();
+                writeln!(
+                    &mut reply_buf,
+                    "Hint: try search for '*{}*'",
+                    pattern
+                ).ok();
             }
 
             ctx.bot.reply_to(msg, &reply_buf);
@@ -192,16 +193,32 @@ impl Searcher {
         ctx.bot.reply_to(msg, &reply_buf);
     }
 
-    fn refer_result(&self, nth_result: i32, msg: &tg::Message, ctx: &Context) {
+    fn try_refer_result(
+        &self,
+        nth_result: i32,
+        msg: &tg::Message,
+        ctx: &Context,
+    ) {
         let last_results = ctx.db
             .load_conf::<Vec<DbMessage>>("history.last_search_result")
             .unwrap_or_default();
         let result = last_results.iter().nth(nth_result as usize);
-        if let Some(dbmsg) = result {
-            let repliable = (dbmsg.chat_id, dbmsg.msg_id);
-            ctx.bot.reply_to(repliable, "Here you go");
-        } else {
+        if result.is_none() {
             ctx.bot.reply_to(msg, "Unable to find message");
+            return;
+        }
+
+        let dbmsg = result.unwrap();
+        let refer_result = ctx.bot.send_raw(
+            dbmsg.chat_id,
+            Some(dbmsg.msg_id),
+            "Here you go",
+            None,
+        );
+        match refer_result {
+            Err(e) => ctx.bot
+                .reply_to(msg, &format!("Unable to refer to message: {:}", e)),
+            Ok(_) => {}
         }
     }
 }
@@ -217,7 +234,8 @@ impl BotExtension for Searcher {
         };
         if msg.is_cmd("search") {
             let search_pattern = msg.cmd_arg("search").unwrap_or("".into());
-            ctx.db.save_conf("history.last_search_pattern", search_pattern);
+            ctx.db
+                .save_conf("history.last_search_pattern", search_pattern);
             ctx.db.save_conf("history.last_search_page", 1);
             self.search(msg, ctx);
             return;
@@ -240,7 +258,7 @@ impl BotExtension for Searcher {
         let match_reference = RE.captures(&msg_txt);
         if let Some(caps) = match_reference {
             let n = caps.get(1).unwrap().as_str().parse::<i32>().unwrap();
-            self.refer_result(n - 1, msg, ctx);
+            self.try_refer_result(n - 1, msg, ctx);
         }
     }
 

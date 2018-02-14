@@ -11,7 +11,8 @@ fn notify_interval() -> Duration {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Afk {
-    who: Option<String>,
+    who: Option<TgID>,
+    name: Option<String>,
     afk_at: Option<DateTime<Utc>>,
     reason: Option<String>,
     last_notify: Option<DateTime<Utc>>,
@@ -19,7 +20,8 @@ pub struct Afk {
 
 impl Afk {
     fn set_afk(&mut self, msg: &tg::Message) {
-        self.who = Some(msg.from.user_name());
+        self.who = Some(msg.from.id);
+        self.name = Some(msg.from.user_name());
         self.afk_at = Some(Self::now());
         self.reason = msg.cmd_arg("afk");
         self.last_notify = Some(Self::now() - notify_interval());
@@ -45,7 +47,7 @@ impl Afk {
             return;
         }
 
-        let who = self.who.clone().unwrap_or("Somebody".into());
+        let name = self.name.clone().unwrap_or("Somebody".into());
         let afk_at = Self::format_time(&self.afk_at.unwrap());
         let duration = Self::now().signed_duration_since(self.afk_at.unwrap());
         let duration = Self::format_duration(&duration);
@@ -53,7 +55,7 @@ impl Afk {
 
         let txt = format!("{} is *AFK* now.\nAFK set time: _{}, {} \
                            ago_\n*Reason*: {}",
-                          who,
+                          name,
                           afk_at,
                           duration,
                           reason);
