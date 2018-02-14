@@ -76,6 +76,7 @@ impl BotExtension for Saver {
         }
 
         if !self.search_groups.contains(&msg.chat.id()) {
+            trace!("history: Message not saved: not in group");
             return;
         }
 
@@ -102,8 +103,8 @@ impl BotExtension for Saver {
 
 impl Searcher {
     fn search(&self, msg: &tg::Message, ctx: &Context) {
-        let args = ctx.db
-            .load_conf::<Vec<String>>("history.last_search_args")
+        let pattern = ctx.db
+            .load_conf::<String>("history.last_search_pattern")
             .unwrap_or_default();
         let page = ctx.db
             .load_conf::<usize>("history.last_search_page")
@@ -112,31 +113,32 @@ impl Searcher {
             .load_conf::<Vec<i64>>("history.search_users")
             .unwrap_or_default();
 
-        if args.is_empty() {
+        if pattern.is_empty() {
             ctx.bot.reply_md_to(
                 msg,
-                "Usage: search <pattern> [pattern...]\n\
-                 Patterns:\n    \
-                 *: matches any string",
+                "Usage: `/search <pattern>`\n\
+                 Wildcard '*' in <pattern> matches any string.\n"
             );
             return;
         }
 
-        let patterns = args.iter()
-            .map(|x| x.replace("*", "%"))
-            .collect::<Vec<String>>();
-        let (count, result) = ctx.db.search_msg(page, &patterns, &users);
+        let db_pat: String = pattern.replace("*", "%").replace("'", "''");
+        let (count, result) = ctx.db.search_msg(page, &db_pat, &users);
         let result_count = result.len();
         let mut reply_buf = String::new();
         let start = (page - 1) * SEARCH_PER + 1;
-        writeln!(&mut reply_buf, "Searching for: {}", args.join(" ")).ok();
+        writeln!(&mut reply_buf, "Searching for: {}", pattern).ok();
 
         if count == 0 {
             writeln!(
                 &mut reply_buf,
-                "No matching result found (try search for '*{}*'?)",
-                args.join("")
+                "No matching result found"
             ).ok();
+
+            if !pattern.starts_with("*") && !pattern.ends_with("*") {
+                writeln!(&mut reply_buf, "Hint: try search for '*{}*'", pattern).ok();
+            }
+
             ctx.bot.reply_to(msg, &reply_buf);
             return;
         }
@@ -214,8 +216,8 @@ impl BotExtension for Searcher {
             static ref RE: Regex = Regex::new(r"^/ref_(\d+)(@\w+bot)?$").unwrap();
         };
         if msg.is_cmd("search") {
-            ctx.db
-                .save_conf("history.last_search_args", msg.cmd_args("search"));
+            let search_pattern = msg.cmd_arg("search").unwrap_or("".into());
+            ctx.db.save_conf("history.last_search_pattern", search_pattern);
             ctx.db.save_conf("history.last_search_page", 1);
             self.search(msg, ctx);
             return;

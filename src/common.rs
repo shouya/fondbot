@@ -29,6 +29,8 @@ pub use self::telegram_bot as tg;
 pub use self::tg::Listener;
 pub use services::*;
 
+pub type TgID = i64;
+
 lazy_static! {
     pub static ref GLOBAL_TIMEZONE: chrono::FixedOffset = chrono::FixedOffset::east(28800);
 }

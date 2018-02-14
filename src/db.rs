@@ -136,27 +136,22 @@ impl Db {
             .ok();
     }
 
-    pub fn search_msg<T: AsRef<str>>(
+    pub fn search_msg(
         &self,
         page: usize,
-        patterns: &[T],
+        pattern: &str,
         users: &[i64],
     ) -> (usize, Vec<DbMessage>) {
-        if patterns.is_empty() {
+        if pattern.is_empty() {
             return Default::default();
         }
-        let msg_filter_sql = patterns
-            .iter()
-            .map(|pat| format!("text LIKE '{}'", quote_str(pat.as_ref())))
-            .collect::<Vec<String>>()
-            .join(" AND ");
+        let msg_filter_sql = format!("lower(text) LIKE lower('{}')", pattern);
         let user_filter_sql = users
             .iter()
             .chain(std::iter::once(&-1))
             .map(|i| format!("user_id = {}", i))
             .collect::<Vec<String>>()
             .join(" OR ");
-
         let query = messages::table
             .filter(sql(&msg_filter_sql))
             .filter(sql(&format!("({})", user_filter_sql)))
