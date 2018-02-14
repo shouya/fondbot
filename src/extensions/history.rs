@@ -126,6 +126,15 @@ impl Searcher {
         let mut reply_buf = String::new();
         let start = (page - 1) * SEARCH_PER + 1;
         writeln!(&mut reply_buf, "Searching for: {}", args.join(" ")).ok();
+
+        if count == 0 {
+            writeln!(&mut reply_buf,
+                     "No matching result found (try search for '*{}*'?)",
+                     args.join(""));
+            ctx.bot.reply_to(msg, &reply_buf);
+            return;
+        }
+
         writeln!(
             &mut reply_buf,
             "Showing {}-{} of {} search results",
