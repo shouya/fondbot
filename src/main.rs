@@ -18,8 +18,10 @@ pub extern crate tokio_core;
 
 mod common;
 mod context;
+mod bot;
 
 use common::*;
+use context::Context;
 
 const DEBUG: bool = false;
 
@@ -41,8 +43,7 @@ fn main() {
         use slog_async::*;
         use slog::*;
 
-        let decorator = TermDecorator::new().build();
-        let drain = CompactFormat::new(decorator).build().fuse();
+        let drain = term_full().fuse();
         let drain = Async::new(drain).build().fuse();
 
         slog::Logger::root(drain, o!())
@@ -57,11 +58,20 @@ fn main() {
             .expect("Failed building bot API")
     };
 
-    info!(logger, "Initializing bot context");
-    let mut ctx = context::Context::new(bot, core.handle(), logger.clone());
+    let consume_updates = bot.consume_updates().and_then(|updates| {
+        info!(logger, "Consumed previous {} updates", updates.len());
+        ok(())
+    });
 
-    info!(logger, "Started serving");
-    let future = ctx.serve();
+    info!(logger, "Initializing bot context");
+    let mut ctx = Context::new(bot.clone(), core.handle(), logger.clone());
+
+    let serve = futures::lazy(|| {
+        info!(logger, "Started serving");
+        ok(())
+    }).and_then(|_| ctx.serve());
+
+    let future = consume_updates.then(|_| serve);
 
     core.run(future).unwrap();
 }

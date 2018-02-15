@@ -4,6 +4,7 @@ pub struct Context {
   pub bot: tg::Api,
   pub handle: reactor::Handle,
   pub bypass: Cell<bool>,
+  // pub extension_stack: Vec<Box<BotExtension>>,
   pub logger: Logger
 }
 
