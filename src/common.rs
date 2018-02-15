@@ -15,3 +15,13 @@ pub use slog;
 pub use slog::Logger;
 
 pub use bot::TgApiExt;
+
+pub use context::Context;
+pub use bot_extension::BotExtension;
+
+// pub use chrono;
+
+// lazy_static! {
+//   pub static ref GLOBAL_TIMEZONE: chrono::FixedOffset = chrono::FixedOffset::east(28800);
+// }
+

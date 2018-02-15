@@ -5,6 +5,9 @@
 #[macro_use]
 pub extern crate slog;
 
+#[macro_use]
+extern crate lazy_static;
+
 extern crate dotenv;
 extern crate slog_async;
 extern crate slog_term;
@@ -19,6 +22,7 @@ pub extern crate tokio_core;
 mod common;
 mod context;
 mod bot;
+mod bot_extension;
 
 use common::*;
 use context::Context;
