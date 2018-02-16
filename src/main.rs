@@ -29,6 +29,7 @@ mod context;
 mod bot;
 mod bot_extension;
 mod db;
+mod services;
 
 use common::*;
 use context::Context;

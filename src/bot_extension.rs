@@ -5,8 +5,8 @@ pub trait BotExtension {
   where
     Self: Sized;
 
-  fn process(&mut self, msg: &tg::Message, ctx: &Context) {}
-  fn process_callback(&mut self, callback: &tg::CallbackQuery, ctx: &Context) {}
+  fn process(&mut self, _message: &tg::Message, _ctx: &Context) {}
+  fn process_callback(&mut self, _query: &tg::CallbackQuery, _ctx: &Context) {}
   fn name(&self) -> &str;
 
   /// Report current status
