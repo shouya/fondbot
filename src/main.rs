@@ -6,7 +6,7 @@
 pub extern crate diesel;
 #[macro_use]
 extern crate diesel_codegen;
-#[macro_use(lazy_static)]
+#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 pub extern crate serde_derive;
@@ -23,13 +23,14 @@ pub extern crate serde;
 pub extern crate serde_json;
 pub extern crate telegram_bot;
 pub extern crate tokio_core;
+pub extern crate regex;
 
 mod common;
 mod context;
 mod bot;
-mod bot_extension;
 mod db;
-mod services;
+mod context_extensions;
+mod extensions;
 
 use common::*;
 use context::Context;

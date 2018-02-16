@@ -1,9 +1,11 @@
 pub use std::env;
-pub use std::cell::{RefCell, Cell};
+pub use std::cell::{Cell, RefCell};
 pub use std::error::Error;
 pub use std::collections::{HashMap, HashSet};
+pub use std::fmt::{Debug, Display};
 
 pub use telegram_bot as tg;
+pub use tg::ParseMode::{Html, Markdown};
 
 pub use tokio_core::reactor;
 
@@ -13,16 +15,22 @@ pub use futures::Future;
 pub use futures::Stream;
 
 pub use serde::ser::Serialize;
-pub use serde::de::Deserialize;
+pub use serde::de::{Deserialize, DeserializeOwned};
 
 pub use slog;
 pub use slog::Logger;
 
-pub use bot::TgApiExt;
+pub use regex::Regex;
+
+pub use bot::{reply, TgApiExt, TgMessageExt};
 
 pub use context::Context;
-pub use bot_extension::BotExtension;
+pub use extensions::BotExtension;
+pub use context_extensions::ContextExtension;
 pub use db::Db;
+
+pub use context_extensions::name_map::NameMap;
+pub use context_extensions::safety_guard::SafetyGuard;
 
 // pub use chrono;
 

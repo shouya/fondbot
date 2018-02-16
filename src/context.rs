@@ -1,5 +1,4 @@
 use common::*;
-use services::safety_guard::SafetyGuard;
 
 pub struct Context {
   pub bot: tg::Api,
@@ -7,18 +6,18 @@ pub struct Context {
   pub bypass: Cell<bool>,
   pub extension_stack: Vec<Box<BotExtension>>,
   pub logger: Logger,
-  pub state: RefCell<ContextState>,
-}
-
-#[derive(Serialize, Deserialize, Default)]
-pub struct ContextState {
   pub guard: SafetyGuard,
+  pub names: NameMap,
+  pub db: Db,
 }
 
 impl Context {
   pub fn new(bot: tg::Api, handle: reactor::Handle, logger: Logger) -> Context {
-    let mut state: ContextState = Default::default();
-    state.guard.initialize_from_env();
+    use ContextExtension;
+    let db = Db::init();
+
+    let guard = SafetyGuard::new(&db);
+    let names = NameMap::new(&db);
 
     Context {
       bot: bot,
@@ -26,7 +25,9 @@ impl Context {
       bypass: Cell::new(false),
       extension_stack: vec![],
       logger: logger,
-      state: RefCell::new(state),
+      db: db,
+      guard: guard,
+      names: names
     }
   }
 
@@ -53,7 +54,7 @@ impl Context {
   }
 
   pub fn process_message(&mut self, message: &tg::Message) {
-    if !self.state.borrow().guard.is_safe(message) {
+    if !self.guard.is_safe(message) {
       self.prohibit_access(message);
       return;
     }
@@ -69,5 +70,9 @@ impl Context {
     self.bot.spawn(req);
 
     warn!(self.logger, "Prohibited access: {:?}", msg)
+  }
+
+  pub fn set_bypass(&self) {
+    self.bypass.replace(true);
   }
 }
