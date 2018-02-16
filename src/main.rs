@@ -3,10 +3,15 @@
 #![feature(conservative_impl_trait)]
 
 #[macro_use]
-pub extern crate slog;
-
+pub extern crate diesel;
 #[macro_use]
+extern crate diesel_codegen;
+#[macro_use(lazy_static)]
 extern crate lazy_static;
+#[macro_use]
+pub extern crate serde_derive;
+#[macro_use]
+pub extern crate slog;
 
 extern crate dotenv;
 extern crate slog_async;
@@ -23,6 +28,7 @@ mod common;
 mod context;
 mod bot;
 mod bot_extension;
+mod db;
 
 use common::*;
 use context::Context;

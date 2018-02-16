@@ -18,6 +18,7 @@ pub use bot::TgApiExt;
 
 pub use context::Context;
 pub use bot_extension::BotExtension;
+pub use db::Db;
 
 // pub use chrono;
 
