@@ -95,7 +95,7 @@ impl TgMessageExt for tg::Message {
   }
   fn cmd_arg(&self) -> Option<String> {
     lazy_static! {
-      static ref RE: Regex = Regex::new(r"^/(?P<cmd>\w+)(@\w+bot)?\s+?(?P<arg>.*+)$").unwrap();
+      static ref RE: Regex = Regex::new(r"^/(?P<cmd>\w+)(@\w+bot)?\s+?(?P<arg>.*)$").unwrap();
     }
     if let tg::MessageKind::Text { ref data, .. } = self.kind {
       RE.captures(data)

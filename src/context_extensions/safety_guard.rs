@@ -27,13 +27,7 @@ impl SafetyGuard {
     self.safe_chats.contains(&msg.chat.id())
   }
 
-  pub fn initialize_from_env(&mut self) {}
-
   pub fn add_safe_chat(&mut self, id: &tg::ChatId) {
     self.safe_chats.insert(id.clone());
-  }
-
-  pub fn remove_safe_chat(&mut self, id: &tg::ChatId) {
-    self.safe_chats.remove(id);
   }
 }

@@ -15,12 +15,8 @@ impl ContextExtension for NameMap {
     let assocs = env_value.split(",");
     for pair in assocs {
       let mut pair = pair.split("->");
-      let user_id: tg::UserId = pair
-        .nth(0)
-        .expect("Invalid name map")
-        .parse::<tg::Integer>()
-        .expect("Invalid name map")
-        .into();
+      let user_id: tg::UserId =
+        pair.nth(0)?.parse::<tg::Integer>().ok()?.into();
       let user_name = pair.nth(1).expect("Invalid name map");
       ret.add_name_map(user_id, user_name);
     }
@@ -67,9 +63,5 @@ impl NameMap {
 
   pub fn add_name_map(&mut self, id: tg::UserId, name: &str) {
     self.names.insert(id, name.into());
-  }
-
-  pub fn remove_name_map(&mut self, id: &tg::UserId) {
-    self.names.remove(id);
   }
 }

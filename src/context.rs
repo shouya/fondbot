@@ -4,7 +4,7 @@ pub struct Context {
   pub bot: tg::Api,
   pub handle: reactor::Handle,
   pub bypass: Cell<bool>,
-  pub extension_stack: Vec<Box<BotExtension>>,
+  pub exts: RefCell<Vec<Box<BotExtension>>>,
   pub logger: Logger,
   pub guard: SafetyGuard,
   pub names: NameMap,
@@ -23,18 +23,18 @@ impl Context {
       bot: bot,
       handle: handle,
       bypass: Cell::new(false),
-      extension_stack: vec![],
+      exts: RefCell::new(vec![]),
       logger: logger,
       db: db,
       guard: guard,
-      names: names
+      names: names,
     }
   }
 
   pub fn plug_ext<T: BotExtension + 'static>(&mut self) {
     let plugin = T::init(&self);
     info!(self.logger, "Loading plugin {}", plugin.name());
-    self.extension_stack.push(Box::new(plugin));
+    self.exts.borrow_mut().push(Box::new(plugin));
   }
 
   pub fn serve<'a>(&'a mut self) -> impl Future<Item = (), Error = ()> + 'a {
@@ -58,7 +58,26 @@ impl Context {
       self.prohibit_access(message);
       return;
     }
+
     info!(self.logger, "Got message {:?}", message);
+    self.exts_process_message(message);
+  }
+
+  fn exts_process_message(&self, msg: &tg::Message) {
+    let mut exts = self.exts.borrow_mut();
+    for ext in exts.iter_mut() {
+      if self.bypass.get() {
+        trace!(
+          self.logger,
+          "Not processing with plugin: {} (bypassed)",
+          ext.name()
+        );
+      } else {
+        trace!(self.logger, "Processing with plugin: {}", ext.name());
+        ext.process(msg, self);
+      }
+    }
+    self.bypass.set(false);
   }
 
   pub fn prohibit_access(&self, msg: &tg::Message) {

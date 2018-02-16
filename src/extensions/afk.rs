@@ -1,6 +1,5 @@
 use common::*;
 
-use chrono;
 use chrono::Duration;
 use chrono::prelude::*;
 
@@ -41,7 +40,7 @@ impl Afk {
     fn notification_expired(&self) -> bool {
         assert!(self.is_afk());
         let last_notify = self.state.as_ref().unwrap().last_notify;
-        Utc::now().signed_duration_since(last_notify) >= *NOTIFY_INTERVAL
+        Local::now().signed_duration_since(last_notify) >= *NOTIFY_INTERVAL
     }
 
     fn report_afk(&mut self, msg: &tg::Message, ctx: &Context) {
@@ -54,21 +53,25 @@ impl Afk {
             return;
         }
 
-        let state = self.state.as_ref().unwrap();
-        let name = &state.user_name;
-        let afk_at = Self::format_time(&state.afk_at);
-        let duration = Self::now().signed_duration_since(state.afk_at);
-        let duration = Self::format_duration(&duration);
-        let reason = state.reason.clone().unwrap_or("[not given]".into());
+        let text = {
+            let state = self.state.as_ref().unwrap();
+            let name = &state.user_name;
+            let afk_at = Self::format_time(&state.afk_at);
+            let duration = Local::now().signed_duration_since(state.afk_at);
+            let duration = Self::format_duration(&duration);
+            let reason = state.reason.clone().unwrap_or("[not given]".into());
 
-        let txt = format!(
-            "{} is *AFK* now.\n\
-             AFK set time: _{}, {} ago_\n\
-             *Reason*: {}",
-            name, afk_at, duration, reason
-        );
+            format!(
+                "{} is *AFK* now.\n\
+                 AFK set time: _{}, {} ago_\n\
+                 *Reason*: {}",
+                name, afk_at, duration, reason
+            )
+        };
 
-        ctx.bot.reply_md_to(msg, txt);
+        self.state.as_mut().unwrap().last_notify = Local::now();
+
+        ctx.bot.reply_md_to(msg, text);
     }
 
     #[allow(unused_must_use)]
@@ -103,9 +106,6 @@ impl Afk {
         format!("{}", fmt)
     }
 
-    fn now() -> DateTime<Utc> {
-        chrono::Utc::now()
-    }
 
     fn is_afk(&self) -> bool {
         self.state.is_some()
