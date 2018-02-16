@@ -65,6 +65,7 @@ pub trait TgMessageExt {
   }
   fn cmd_name(&self) -> Option<String>;
   fn cmd_arg(&self) -> Option<String>;
+  fn text(&self) -> Option<String>;
 }
 
 impl TgMessageExt for tg::Message {
@@ -101,6 +102,14 @@ impl TgMessageExt for tg::Message {
       RE.captures(data)
         .and_then(|cap| cap.name("arg"))
         .map(|x| x.as_str().into())
+    } else {
+      None
+    }
+  }
+
+  fn text(&self) -> Option<String> {
+    if let tg::MessageKind::Text { ref data, .. } = self.kind {
+      Some(data.clone())
     } else {
       None
     }

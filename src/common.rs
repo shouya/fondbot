@@ -3,9 +3,13 @@ pub use std::cell::{Cell, RefCell};
 pub use std::error::Error;
 pub use std::collections::{HashMap, HashSet};
 pub use std::fmt::{Debug, Display};
+pub use std::fmt::Write;
 
-pub use telegram_bot as tg;
 pub use tg::ParseMode::{Html, Markdown};
+pub mod tg {
+  pub use telegram_bot::*;
+}
+pub use telegram_bot_raw::types::chat::MessageChat;
 
 pub use tokio_core::reactor;
 
@@ -31,6 +35,8 @@ pub use db::Db;
 
 pub use context_extensions::name_map::NameMap;
 pub use context_extensions::safety_guard::SafetyGuard;
+
+pub use util::ellipsis;
 
 // pub use chrono;
 

@@ -295,6 +295,7 @@ dependencies = [
  "slog-scope 4.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog-term 2.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "telegram-bot 0.6.0 (git+https://github.com/telegram-rs/telegram-bot?rev=eb2a9f4)",
+ "telegram-bot-raw 0.6.0 (git+https://github.com/telegram-rs/telegram-bot?rev=eb2a9f4)",
  "tokio-core 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

@@ -25,12 +25,15 @@ pub extern crate telegram_bot;
 pub extern crate tokio_core;
 pub extern crate regex;
 
+pub extern crate telegram_bot_raw;
+
 mod common;
 mod context;
 mod bot;
 mod db;
 mod context_extensions;
 mod extensions;
+mod util;
 
 use common::*;
 use context::Context;
