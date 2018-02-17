@@ -81,7 +81,10 @@ fn main() {
     info!(logger, "Initializing bot context");
     let mut ctx = Context::new(bot.clone(), core.handle(), logger.clone());
 
-    ctx.plug_ext::<extensions::afk::Afk>();
+    use extensions::*;
+    ctx.plug_ext::<history::Saver>();
+    ctx.plug_ext::<afk::Afk>();
+    ctx.plug_ext::<history::Searcher>();
 
     let serve = futures::lazy(|| {
         info!(logger, "Started serving");

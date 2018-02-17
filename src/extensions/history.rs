@@ -1,8 +1,7 @@
 use common::*;
 use db::SEARCH_PER;
 use db::DbMessage;
-use chrono;
-use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
+use chrono::{DateTime, Local, TimeZone};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Saver {
@@ -13,9 +12,9 @@ pub struct Saver {
 #[derive(Debug, Clone, Default)]
 pub struct Searcher;
 
-fn chat_name(chat: &MessageChat, ctx: &Context) -> String {
+fn chat_name(chat: &MessageChat) -> String {
     match chat {
-        &MessageChat::Private(ref user) => ctx.names.get(&user.id),
+        &MessageChat::Private(..) => "private".into(),
         &MessageChat::Group(ref g) => g.title.clone(),
         &MessageChat::Supergroup(ref g) => g.title.clone(),
         _ => "Unknown".into(),
@@ -40,7 +39,7 @@ fn to_db_message(msg: &tg::Message, ctx: &Context) -> DbMessage {
         user_id: msg.from.id.into(),
         user_name: Some(ctx.names.get(&msg.from)),
         chat_id: msg.chat.id().into(),
-        chat_name: Some(chat_name(&msg.chat, ctx)),
+        chat_name: Some(chat_name(&msg.chat)),
         is_group: is_group(&msg.chat),
         reply_to_msg_id: msg.reply_to_message
             .as_ref()
@@ -228,13 +227,19 @@ impl Searcher {
             "Here you go",
         );
         req.reply_to(tg::MessageId::from(dbmsg.msg_id));
-        let refer_result = ctx.bot.send(req).wait();
-
-        match refer_result {
-            Err(e) => ctx.bot
-                .reply_to(msg, format!("Unable to refer to message: {:}", e)),
-            Ok(_) => {}
-        }
+        let bot = ctx.bot.clone();
+        let msg = msg.clone();
+        let future = ctx.bot.send(req).then(move |e| {
+            match e {
+                Ok(..) => {}
+                Err(e) => bot.reply_to(
+                    msg,
+                    format!("Unable to refer to message: {:}", e),
+                ),
+            }
+            Ok(())
+        });
+        ctx.handle.spawn(future);
     }
 }
 

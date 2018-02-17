@@ -7,7 +7,6 @@ use diesel::types::{Bool, Text};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json;
-use chrono::prelude::Utc;
 use std;
 
 const DB_FILE: &'static str = "data.db";
@@ -35,7 +34,7 @@ pub mod schema {
 
 use self::schema::*;
 
-#[derive(Insertable, Queryable, Serialize, Deserialize)]
+#[derive(Insertable, Queryable, Serialize, Deserialize, Debug)]
 #[table_name = "messages"]
 pub struct DbMessage {
     pub id: Option<i32>,
@@ -145,7 +144,7 @@ impl Db {
         if pattern.is_empty() {
             return Default::default();
         }
-        let msg_filter_sql = format!("lower(text) LIKE lower('{}')", pattern);
+        let msg_filter_sql = format!("lower(text) LIKE lower('%{}%')", pattern);
         let user_filter_sql = users
             .iter()
             .chain(std::iter::once(&-1))
@@ -155,7 +154,6 @@ impl Db {
         let query = messages::table
             .filter(sql(&msg_filter_sql))
             .filter(sql(&format!("({})", user_filter_sql)))
-            .filter(messages::created_at.lt(Utc::now().timestamp() - 60))
             .order(messages::created_at.desc());
         let count: i64 = query
             .clone()
