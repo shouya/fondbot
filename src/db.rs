@@ -34,7 +34,7 @@ pub mod schema {
 
 use self::schema::*;
 
-#[derive(Insertable, Queryable, Serialize, Deserialize, Debug)]
+#[derive(Insertable, Queryable, Serialize, Deserialize, Clone, Debug)]
 #[table_name = "messages"]
 pub struct DbMessage {
     pub id: Option<i32>,

@@ -9,10 +9,20 @@ pub struct Saver {
     search_users: HashSet<tg::UserId>,
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct Searcher;
+#[derive(Debug)]
+struct SearchQuery {
+    pattern: String,
+    page: usize,
+    total: usize,
+    items: Vec<DbMessage>,
+}
 
-const EMPTY_PATTERN_PROMPT: &'static str = "Please enter pattern:";
+#[derive(Debug, Default)]
+pub struct Searcher {
+    search: Option<SearchQuery>,
+}
+
+const EMPTY_PATTERN_PROMPT: &'static str = "Please enter pattern";
 
 fn chat_name(chat: &tg::MessageChat) -> String {
     use tg::MessageChat::*;
@@ -121,10 +131,14 @@ impl BotExtension for Saver {
 }
 
 impl Searcher {
-    fn beginning_search(&self, query_msg: &tg::Message, ctx: &Context) {
-        let pattern = ctx.db
-            .load_conf::<Option<String>>("history.search_pattern")
-            .unwrap_or_default();
+    fn beginning_search(&mut self, query_msg: &tg::Message, ctx: &Context) {
+        let pattern = if query_msg.is_cmd("search") {
+            // as /search command arg
+            query_msg.cmd_arg()
+        } else {
+            // as force reply content
+            query_msg.text_content()
+        };
 
         if pattern.is_none() {
             let req = query_msg
@@ -134,6 +148,13 @@ impl Searcher {
             ctx.bot.spawn(req);
             return;
         }
+
+        self.search = Some(SearchQuery {
+            pattern: pattern.unwrap(),
+            page: 1,
+            total: 0,
+            items: Vec::new(),
+        });
 
         let (reply, pagination_buttons) = self.search_content(&ctx.db);
 
@@ -146,22 +167,31 @@ impl Searcher {
             .spawn(query_msg.text_reply(reply).reply_markup(keyboard).clone());
     }
 
-    fn flip_page(&self, action: &str, edit_msg: &tg::Message, ctx: &Context) {
-        let mut page = ctx.db
-            .load_conf::<usize>("history.search_page")
-            .unwrap_or(1);
-        match action {
-            "prev" => page -= 1,
-            "next" => page += 1,
-            _ => {
-                error!(ctx.logger, "invalid flip page action: {}", action);
-                panic!("invalid flip page action");
+    fn flip_page(
+        &mut self,
+        action: &str,
+        edit_msg: &tg::Message,
+        ctx: &Context,
+    ) {
+        if self.search.is_none() {
+            return;
+        }
+
+        {
+            let search = self.search.as_mut().unwrap();
+
+            match action {
+                "prev" => search.page -= 1,
+                "next" => search.page += 1,
+                _ => {
+                    error!(ctx.logger, "invalid flip page action: {}", action);
+                    panic!("invalid flip page action");
+                }
+            }
+            if search.page <= 0 {
+                search.page = 1;
             }
         }
-        if page <= 0 {
-            page = 1;
-        }
-        ctx.db.save_conf("history.search_page", page);
 
         let (reply, pagination_buttons) = self.search_content(&ctx.db);
 
@@ -177,50 +207,47 @@ impl Searcher {
     }
 
     fn search_content(
-        &self,
+        &mut self,
         db: &Db,
     ) -> (String, Vec<tg::InlineKeyboardButton>) {
-        let pattern = db.load_conf::<String>("history.search_pattern")
-            .unwrap_or_default();
-        let page = db.load_conf::<usize>("history.search_page")
-            .unwrap_or(1);
-        let users = db.load_conf::<Vec<i64>>("history.search_users")
-            .unwrap_or_default();
+        {
+            let users = db.load_conf::<Vec<i64>>("history.search_users")
+                .unwrap_or_default();
+            let search = self.search.as_mut().unwrap();
+            let pattern = &search.pattern;
+            let page = search.page;
 
-        let db_pat: String = pattern.replace("*", "%").replace("'", "''");
-        let (count, result) = db.search_msg(page, &db_pat, &users);
-        let result_count = result.len();
-        let mut reply_buf = String::new();
-        let start = (page - 1) * SEARCH_PER + 1;
+            let db_pat: String = pattern.replace("*", "%").replace("'", "''");
+            let (count, result) = db.search_msg(page, &db_pat, &users);
 
-        writeln!(&mut reply_buf, "Searching for: {}", pattern).ok();
-
-        if count == 0 {
-            writeln!(&mut reply_buf, "No matching result found").ok();
-
-            if !pattern.starts_with("*") && !pattern.ends_with("*") {
-                writeln!(
-                    &mut reply_buf,
-                    "Hint: try search for '*{}*'",
-                    pattern
-                ).ok();
-            }
-
-            return (reply_buf, vec![]);
+            search.total = count;
+            search.items = result.clone();
         }
 
-        db.save_conf("history.search_result", &result);
+        return (self.format_reply(), self.pagination());
+    }
 
+    fn format_reply(&self) -> String {
+        let search = self.search.as_ref().unwrap();
+
+        let mut reply_buf = String::new();
+        writeln!(&mut reply_buf, "Searching for: {}", search.pattern).ok();
+
+        if search.total == 0 {
+            return "No matching result found.".into();
+        }
+
+        let start = (search.page - 1) * SEARCH_PER + 1;
         writeln!(
             &mut reply_buf,
             "Showing {}-{} of {} search results",
             start,
-            start + result_count - 1,
-            count
+            start + search.items.len() - 1,
+            search.total
         ).ok();
         writeln!(&mut reply_buf, "").ok();
 
-        for (i, message) in result.iter().enumerate() {
+        for (i, message) in search.items.iter().enumerate() {
             let user = ellipsis(
                 &message
                     .user_name
@@ -243,25 +270,34 @@ impl Searcher {
 
             writeln!(
                 &mut reply_buf,
-                "/ref_{} ({}) {} at {}:\n\u{27A4} {}",
-                i + 1,
+                // "/ref_{} ({}) {} at {}:\n\u{27A4} {}",
+                "\u{27A4} {}, {} at {}:\n{} (\u{261E} /ref_{})",
                 format_time(message.created_at),
                 user,
                 group,
-                extract
+                extract,
+                i + 1,
             ).ok();
         }
 
+        reply_buf
+    }
+
+    fn pagination(&self) -> Vec<tg::InlineKeyboardButton> {
+        let search = self.search.as_ref().unwrap();
+        let page = search.page;
+
         let mut pagination = Vec::new();
+
         if page > 1 {
             pagination.push(self.callback_button("«", "prev_page"));
         }
-        let count_so_far = result_count + (page - 1) * SEARCH_PER;
-        if count_so_far < count {
+        let count_so_far = search.items.len() + (page - 1) * SEARCH_PER;
+        if count_so_far < search.total {
             pagination.push(self.callback_button("»", "next_page"));
-        }
+        };
 
-        return (reply_buf, pagination);
+        pagination
     }
 
     fn try_refer_result(
@@ -270,21 +306,24 @@ impl Searcher {
         msg: &tg::Message,
         ctx: &Context,
     ) {
-        let results = ctx.db
-            .load_conf::<Vec<DbMessage>>("history.search_result")
-            .unwrap_or_default();
-        let result = results.iter().nth(nth_result as usize);
-        if result.is_none() {
+        let ref_msg = match self.search {
+            Some(ref search) => {
+                search.items.iter().nth(nth_result as usize).clone()
+            }
+            None => None,
+        };
+
+        if ref_msg.is_none() {
             ctx.bot.reply_to(msg, "Unable to find message");
             return;
         }
 
-        let dbmsg = result.unwrap();
+        let ref_msg = ref_msg.unwrap();
         let mut req = tg::SendMessage::new(
-            tg::ChatId::from(dbmsg.chat_id),
+            tg::ChatId::from(ref_msg.chat_id),
             "Here you go",
         );
-        req.reply_to(tg::MessageId::from(dbmsg.msg_id));
+        req.reply_to(tg::MessageId::from(ref_msg.msg_id));
         let bot = ctx.bot.clone();
         let msg = msg.clone();
         let future = ctx.bot.send(req).then(move |e| {
@@ -312,8 +351,7 @@ impl BotExtension for Searcher {
         };
         if msg.is_cmd("search") {
             let search_pattern = msg.cmd_arg();
-            ctx.db
-                .save_conf("history.search_pattern", search_pattern);
+            ctx.db.save_conf("history.search_pattern", search_pattern);
             ctx.db.save_conf("history.search_page", 1);
             self.beginning_search(msg, ctx);
             return;
@@ -330,8 +368,6 @@ impl BotExtension for Searcher {
         }
 
         if msg.is_force_reply(EMPTY_PATTERN_PROMPT) {
-            ctx.db
-                .save_conf("history.search_pattern", msg.text_content());
             self.beginning_search(msg, ctx);
         }
     }
