@@ -46,11 +46,39 @@ impl Context {
           tg::UpdateKind::Message(message) => {
             self.process_message(&message);
           }
+          tg::UpdateKind::CallbackQuery(query) => {
+            self.process_callback(&query);
+          }
           _ => {}
         };
         Ok(())
       })
       .map_err(|_| ())
+  }
+
+  pub fn process_callback(&mut self, query: &tg::CallbackQuery) {
+    if !self.guard.is_safe(&query.message) {
+      return;
+    }
+
+    info!(self.logger, "Got callback {:?}", query);
+    if query.ext().is_none() {
+      warn!(self.logger, "Unknown callback from nowhere");
+      return;
+    }
+
+    let mut exts = self.exts.borrow_mut();
+    let ext = exts
+      .iter_mut()
+      .find(|ext| query.ext().unwrap() == ext.name());
+
+    if ext.is_none() {
+      warn!(self.logger, "Cannot find ext: {}", query.ext().unwrap());
+      return;
+    }
+
+    let ext = ext.unwrap();
+    ext.process_callback(query, self);
   }
 
   pub fn process_message(&mut self, message: &tg::Message) {

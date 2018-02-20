@@ -67,6 +67,7 @@ pub trait TgMessageExt {
   fn cmd_arg(&self) -> Option<String>;
   fn cmd_args(&self) -> Vec<String>;
   fn text_content(&self) -> Option<String>;
+  fn is_force_reply(&self, prompt: &str) -> bool;
 }
 
 impl TgMessageExt for tg::Message {
@@ -124,6 +125,15 @@ impl TgMessageExt for tg::Message {
       None
     }
   }
+
+  fn is_force_reply(&self, prompt: &str) -> bool {
+    match self.reply_to_message {
+      Some(box tg::MessageOrChannelPost::Message(ref refer)) => {
+        refer.text_content() == Some(prompt.into())
+      }
+      _ => false,
+    }
+  }
 }
 
 // Requests
@@ -135,4 +145,18 @@ where
   tg::SendMessage::new(to.to_source_chat(), text)
     .reply_to(to)
     .clone()
+}
+
+pub trait TgCallbackQueryExt {
+  fn ext(&self) -> Option<&str>;
+  fn key(&self) -> Option<&str>;
+}
+
+impl TgCallbackQueryExt for tg::CallbackQuery {
+  fn ext(&self) -> Option<&str> {
+    self.data.splitn(2, ".").nth(0)
+  }
+  fn key(&self) -> Option<&str> {
+    self.data.splitn(2, ".").nth(1)
+  }
 }

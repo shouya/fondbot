@@ -15,9 +15,13 @@ pub trait BotExtension {
   fn process_callback(&mut self, _query: &tg::CallbackQuery, _ctx: &Context) {}
   fn name(&self) -> &str;
 
+  fn callback_button(&self, text: &str, key: &str) -> tg::InlineKeyboardButton {
+    let callback = format!("{}.{}", self.name(), key);
+    tg::InlineKeyboardButton::callback(text, callback)
+  }
+
   /// Report current status
   fn report(&self) -> String {
     self.name().into()
   }
 }
-

@@ -12,6 +12,8 @@ pub struct Saver {
 #[derive(Debug, Clone, Default)]
 pub struct Searcher;
 
+const EMPTY_PATTERN_PROMPT: &'static str = "Please enter pattern:";
+
 fn chat_name(chat: &tg::MessageChat) -> String {
     use tg::MessageChat::*;
 
@@ -119,31 +121,78 @@ impl BotExtension for Saver {
 }
 
 impl Searcher {
-    fn search(&self, msg: &tg::Message, ctx: &Context) {
+    fn beginning_search(&self, query_msg: &tg::Message, ctx: &Context) {
         let pattern = ctx.db
-            .load_conf::<String>("history.last_search_pattern")
-            .unwrap_or_default();
-        let page = ctx.db
-            .load_conf::<usize>("history.last_search_page")
-            .unwrap_or(1);
-        let users = ctx.db
-            .load_conf::<Vec<i64>>("history.search_users")
+            .load_conf::<Option<String>>("history.search_pattern")
             .unwrap_or_default();
 
-        if pattern.is_empty() {
-            ctx.bot.reply_md_to(
-                msg,
-                "Usage: `/search <pattern>`\n\
-                 Wildcard '*' in <pattern> matches any string.\n",
-            );
+        if pattern.is_none() {
+            let req = query_msg
+                .text_reply(EMPTY_PATTERN_PROMPT)
+                .reply_markup(tg::ForceReply::new().selective().clone())
+                .clone();
+            ctx.bot.spawn(req);
             return;
         }
 
+        let (reply, pagination_buttons) = self.search_content(&ctx.db);
+
+        let mut keyboard = tg::InlineKeyboardMarkup::new();
+        if !pagination_buttons.is_empty() {
+            keyboard.add_row(pagination_buttons);
+        }
+
+        ctx.bot
+            .spawn(query_msg.text_reply(reply).reply_markup(keyboard).clone());
+    }
+
+    fn flip_page(&self, action: &str, edit_msg: &tg::Message, ctx: &Context) {
+        let mut page = ctx.db
+            .load_conf::<usize>("history.search_page")
+            .unwrap_or(1);
+        match action {
+            "prev" => page -= 1,
+            "next" => page += 1,
+            _ => {
+                error!(ctx.logger, "invalid flip page action: {}", action);
+                panic!("invalid flip page action");
+            }
+        }
+        if page <= 0 {
+            page = 1;
+        }
+        ctx.db.save_conf("history.search_page", page);
+
+        let (reply, pagination_buttons) = self.search_content(&ctx.db);
+
+        let mut keyboard = tg::InlineKeyboardMarkup::new();
+        if !pagination_buttons.is_empty() {
+            keyboard.add_row(pagination_buttons);
+        };
+
+        let req = ctx.bot
+            .send(edit_msg.edit_text(reply).reply_markup(keyboard))
+            .then(|_| ok(()));
+        ctx.handle.spawn(req);
+    }
+
+    fn search_content(
+        &self,
+        db: &Db,
+    ) -> (String, Vec<tg::InlineKeyboardButton>) {
+        let pattern = db.load_conf::<String>("history.search_pattern")
+            .unwrap_or_default();
+        let page = db.load_conf::<usize>("history.search_page")
+            .unwrap_or(1);
+        let users = db.load_conf::<Vec<i64>>("history.search_users")
+            .unwrap_or_default();
+
         let db_pat: String = pattern.replace("*", "%").replace("'", "''");
-        let (count, result) = ctx.db.search_msg(page, &db_pat, &users);
+        let (count, result) = db.search_msg(page, &db_pat, &users);
         let result_count = result.len();
         let mut reply_buf = String::new();
         let start = (page - 1) * SEARCH_PER + 1;
+
         writeln!(&mut reply_buf, "Searching for: {}", pattern).ok();
 
         if count == 0 {
@@ -157,9 +206,10 @@ impl Searcher {
                 ).ok();
             }
 
-            ctx.bot.reply_to(msg, reply_buf);
-            return;
+            return (reply_buf, vec![]);
         }
+
+        db.save_conf("history.search_result", &result);
 
         writeln!(
             &mut reply_buf,
@@ -168,46 +218,50 @@ impl Searcher {
             start + result_count - 1,
             count
         ).ok();
-        writeln!(&mut reply_buf, "---------------").ok();
+        writeln!(&mut reply_buf, "").ok();
 
         for (i, message) in result.iter().enumerate() {
+            let user = ellipsis(
+                &message
+                    .user_name
+                    .as_ref()
+                    .map(Clone::clone)
+                    .unwrap_or("someone".into()),
+                10,
+            );
+
+            let group = ellipsis(
+                &message
+                    .chat_name
+                    .as_ref()
+                    .map(Clone::clone)
+                    .unwrap_or("some chat".into()),
+                11,
+            );
+            let extract =
+                escape_markdown(&message.text.clone().unwrap_or_default());
+
             writeln!(
                 &mut reply_buf,
-                "/ref_{} ({}) {}@{}:\n\u{1F539} {}",
+                "/ref_{} ({}) {} at {}:\n\u{27A4} {}",
                 i + 1,
                 format_time(message.created_at),
-                ellipsis(
-                    &message
-                        .user_name
-                        .as_ref()
-                        .map(Clone::clone,)
-                        .unwrap_or("someone".into(),),
-                    10,
-                ),
-                ellipsis(
-                    &message
-                        .chat_name
-                        .as_ref()
-                        .map(Clone::clone,)
-                        .unwrap_or("some chat".into(),),
-                    10,
-                ),
-                message.text.clone().unwrap_or_default()
+                user,
+                group,
+                extract
             ).ok();
         }
-        writeln!(&mut reply_buf, "---------------").ok();
 
+        let mut pagination = Vec::new();
         if page > 1 {
-            writeln!(&mut reply_buf, "/search_prev_page").ok();
+            pagination.push(self.callback_button("«", "prev_page"));
         }
         let count_so_far = result_count + (page - 1) * SEARCH_PER;
         if count_so_far < count {
-            writeln!(&mut reply_buf, "/search_next_page").ok();
+            pagination.push(self.callback_button("»", "next_page"));
         }
 
-        ctx.db.save_conf("history.last_search_result", result);
-
-        ctx.bot.reply_to(msg, reply_buf);
+        return (reply_buf, pagination);
     }
 
     fn try_refer_result(
@@ -216,10 +270,10 @@ impl Searcher {
         msg: &tg::Message,
         ctx: &Context,
     ) {
-        let last_results = ctx.db
-            .load_conf::<Vec<DbMessage>>("history.last_search_result")
+        let results = ctx.db
+            .load_conf::<Vec<DbMessage>>("history.search_result")
             .unwrap_or_default();
-        let result = last_results.iter().nth(nth_result as usize);
+        let result = results.iter().nth(nth_result as usize);
         if result.is_none() {
             ctx.bot.reply_to(msg, "Unable to find message");
             return;
@@ -254,35 +308,45 @@ impl BotExtension for Searcher {
 
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"^/ref_(\d+)(@\w+bot)?$").unwrap();
+            static ref RE: Regex = Regex::new(r"^/ref(\d+)(@\w+bot)?$").unwrap();
         };
         if msg.is_cmd("search") {
-            let search_pattern = msg.cmd_arg().unwrap_or("".into());
+            let search_pattern = msg.cmd_arg();
             ctx.db
-                .save_conf("history.last_search_pattern", search_pattern);
-            ctx.db.save_conf("history.last_search_page", 1);
-            self.search(msg, ctx);
-            return;
-        } else if msg.is_cmd("search_next_page") {
-            let page = ctx.db
-                .load_conf::<usize>("history.last_search_page")
-                .unwrap_or(1);
-            ctx.db.save_conf("history.last_search_page", page + 1);
-            self.search(msg, ctx);
-            return;
-        } else if msg.is_cmd("search_prev_page") {
-            let page = ctx.db
-                .load_conf::<usize>("history.last_search_page")
-                .unwrap_or(2);
-            ctx.db.save_conf("history.last_search_page", page - 1);
-            self.search(msg, ctx);
+                .save_conf("history.search_pattern", search_pattern);
+            ctx.db.save_conf("history.search_page", 1);
+            self.beginning_search(msg, ctx);
             return;
         }
-        let text = msg.text_content().unwrap_or_default();
-        let match_reference = RE.captures(&text);
-        if let Some(caps) = match_reference {
-            let n = caps.get(1).unwrap().as_str().parse::<i32>().unwrap();
-            self.try_refer_result(n - 1, msg, ctx);
+
+        if msg.cmd_name().map(|x| x.starts_with("ref")) == Some(true) {
+            let text = msg.text_content().unwrap_or_default();
+            let match_reference = RE.captures(&text);
+            if let Some(caps) = match_reference {
+                let n = caps.get(1).unwrap().as_str().parse::<i32>().unwrap();
+                self.try_refer_result(n - 1, msg, ctx);
+            }
+            return;
+        }
+
+        if msg.is_force_reply(EMPTY_PATTERN_PROMPT) {
+            ctx.db
+                .save_conf("history.search_pattern", msg.text_content());
+            self.beginning_search(msg, ctx);
+        }
+    }
+
+    fn process_callback(
+        &mut self,
+        callback: &tg::CallbackQuery,
+        ctx: &Context,
+    ) {
+        let edit_msg = &callback.message;
+        match callback.key() {
+            Some("prev_page") => self.flip_page("prev", edit_msg, ctx),
+            Some("next_page") => self.flip_page("next", edit_msg, ctx),
+            Some(_) => {}
+            None => {}
         }
     }
 

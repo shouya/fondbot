@@ -7,7 +7,8 @@ pub use std::fmt::Write;
 
 pub use telegram_bot as tg;
 pub use tg::ParseMode::{Html, Markdown};
-pub use tg::{CanSendChatAction, CanSendMessage, CanReplySendMessage};
+pub use tg::{CanEditMessageReplyMarkup, CanEditMessageText,
+             CanReplySendMessage, CanSendChatAction, CanSendMessage};
 
 pub use tokio_core::reactor;
 
@@ -24,7 +25,7 @@ pub use slog::Logger;
 
 pub use regex::Regex;
 
-pub use bot::{reply, TgApiExt, TgMessageExt};
+pub use bot::{reply, TgApiExt, TgCallbackQueryExt, TgMessageExt};
 
 pub use context::Context;
 pub use extensions::BotExtension;
@@ -35,7 +36,7 @@ pub use services::request::request;
 pub use context_extensions::name_map::NameMap;
 pub use context_extensions::safety_guard::SafetyGuard;
 
-pub use util::ellipsis;
+pub use util::{ellipsis, escape_markdown};
 
 // pub use chrono;
 

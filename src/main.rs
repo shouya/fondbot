@@ -1,6 +1,7 @@
 #![feature(custom_attribute)]
 #![feature(iterator_for_each)]
 #![feature(conservative_impl_trait)]
+#![feature(box_patterns)]
 
 #[macro_use]
 pub extern crate diesel;
