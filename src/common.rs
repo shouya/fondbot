@@ -5,11 +5,9 @@ pub use std::collections::{HashMap, HashSet};
 pub use std::fmt::{Debug, Display};
 pub use std::fmt::Write;
 
+pub use telegram_bot as tg;
 pub use tg::ParseMode::{Html, Markdown};
-pub mod tg {
-  pub use telegram_bot::*;
-}
-pub use telegram_bot_raw::types::chat::MessageChat;
+pub use tg::{CanSendChatAction, CanSendMessage, CanReplySendMessage};
 
 pub use tokio_core::reactor;
 
@@ -32,6 +30,7 @@ pub use context::Context;
 pub use extensions::BotExtension;
 pub use context_extensions::ContextExtension;
 pub use db::Db;
+pub use services::request::request;
 
 pub use context_extensions::name_map::NameMap;
 pub use context_extensions::safety_guard::SafetyGuard;

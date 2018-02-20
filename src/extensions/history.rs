@@ -12,20 +12,24 @@ pub struct Saver {
 #[derive(Debug, Clone, Default)]
 pub struct Searcher;
 
-fn chat_name(chat: &MessageChat) -> String {
+fn chat_name(chat: &tg::MessageChat) -> String {
+    use tg::MessageChat::*;
+
     match chat {
-        &MessageChat::Private(..) => "private".into(),
-        &MessageChat::Group(ref g) => g.title.clone(),
-        &MessageChat::Supergroup(ref g) => g.title.clone(),
+        &Private(..) => "private".into(),
+        &Group(ref g) => g.title.clone(),
+        &Supergroup(ref g) => g.title.clone(),
         _ => "Unknown".into(),
     }
 }
 
-fn is_group(chat: &MessageChat) -> bool {
+fn is_group(chat: &tg::MessageChat) -> bool {
+    use tg::MessageChat::*;
+
     match chat {
-        &MessageChat::Private(..) => false,
-        &MessageChat::Group(..) => true,
-        &MessageChat::Supergroup(..) => true,
+        &Private(..) => false,
+        &Group(..) => true,
+        &Supergroup(..) => true,
         _ => false,
     }
 }
@@ -44,7 +48,7 @@ fn to_db_message(msg: &tg::Message, ctx: &Context) -> DbMessage {
         reply_to_msg_id: msg.reply_to_message
             .as_ref()
             .map(|x| x.to_message_id().into()),
-        text: msg.text(),
+        text: msg.text_content(),
         created_at: Some(msg.date),
     }
 }
@@ -87,13 +91,13 @@ impl BotExtension for Saver {
             return;
         }
 
-        if msg.text().is_none() {
+        if msg.text_content().is_none() {
             // we only want to search text messages
             trace!(ctx.logger, "history: Message not saved: not text");
             return;
         }
 
-        let msg_text = msg.text().unwrap();
+        let msg_text = msg.text_content().unwrap();
 
         if msg_text.starts_with("/") {
             trace!(ctx.logger, "history: Message not saved: bot command")
@@ -274,7 +278,7 @@ impl BotExtension for Searcher {
             self.search(msg, ctx);
             return;
         }
-        let text = msg.text().unwrap_or_default();
+        let text = msg.text_content().unwrap_or_default();
         let match_reference = RE.captures(&text);
         if let Some(caps) = match_reference {
             let n = caps.get(1).unwrap().as_str().parse::<i32>().unwrap();

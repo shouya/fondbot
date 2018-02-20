@@ -65,7 +65,8 @@ pub trait TgMessageExt {
   }
   fn cmd_name(&self) -> Option<String>;
   fn cmd_arg(&self) -> Option<String>;
-  fn text(&self) -> Option<String>;
+  fn cmd_args(&self) -> Vec<String>;
+  fn text_content(&self) -> Option<String>;
 }
 
 impl TgMessageExt for tg::Message {
@@ -94,6 +95,7 @@ impl TgMessageExt for tg::Message {
       None
     }
   }
+
   fn cmd_arg(&self) -> Option<String> {
     lazy_static! {
       static ref RE: Regex = Regex::new(r"^/(?P<cmd>\w+)(@\w+bot)?\s+?(?P<arg>.*)$").unwrap();
@@ -107,7 +109,15 @@ impl TgMessageExt for tg::Message {
     }
   }
 
-  fn text(&self) -> Option<String> {
+  fn cmd_args(&self) -> Vec<String> {
+    lazy_static! {
+      static ref RE: Regex = Regex::new(r"\s+").unwrap();
+    }
+    let arg = self.cmd_arg().unwrap_or("".into());
+    RE.split(&arg).map(|x| x.into()).collect()
+  }
+
+  fn text_content(&self) -> Option<String> {
     if let tg::MessageKind::Text { ref data, .. } = self.kind {
       Some(data.clone())
     } else {

@@ -25,8 +25,6 @@ pub extern crate telegram_bot;
 pub extern crate tokio_core;
 pub extern crate regex;
 
-pub extern crate telegram_bot_raw;
-
 mod common;
 mod context;
 mod bot;
@@ -34,6 +32,7 @@ mod db;
 mod context_extensions;
 mod extensions;
 mod util;
+mod services;
 
 use common::*;
 use context::Context;
@@ -84,6 +83,7 @@ fn main() {
     use extensions::*;
     ctx.plug_ext::<history::Saver>();
     ctx.plug_ext::<afk::Afk>();
+    ctx.plug_ext::<weather::Weather>();
     ctx.plug_ext::<history::Searcher>();
 
     let serve = futures::lazy(|| {
@@ -93,7 +93,7 @@ fn main() {
 
     let future = consume_updates.then(|_| serve);
 
-    core.run(future).unwrap();
+    core.run(future).ok();
 }
 
 #[allow(dead_code)]
