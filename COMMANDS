@@ -1,15 +1,9 @@
 afk - [reason] - set afk
 noafk - no afk
-search - <pattern> [pattern...] - search through history
-enable_search_for_group - enable recording history and searching in this group
+search - [pattern] - search through history
+enable_search_for_chat - enable recording history and searching in this group
 enable_search_for_me - enable search for my messages
 weather - check weather
-track - <tracking_no>
-untrack - <tracking_no>
-list - list trackers
-query - <tracking_no> - print current tracking progress
-cleanup - remove unused trackers
 add_loc - <name> <longlat> - add location for weather
 del_loc - <name> del location for weather
-list_conf - list configurations
 

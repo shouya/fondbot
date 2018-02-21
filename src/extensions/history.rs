@@ -76,7 +76,7 @@ impl BotExtension for Saver {
     }
 
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
-        if msg.is_cmd("enable_search_for_group") {
+        if msg.is_cmd("enable_search_for_chat") {
             self.search_chats.insert(msg.chat.id());
             ctx.db.save_conf("history.search_chats", &self.search_chats);
             ctx.bot.reply_to(
@@ -347,12 +347,9 @@ impl BotExtension for Searcher {
 
     fn process(&mut self, msg: &tg::Message, ctx: &Context) {
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"^/ref(\d+)(@\w+bot)?$").unwrap();
+            static ref RE: Regex = Regex::new(r"^/ref_(\d+)(@\w+bot)?$").unwrap();
         };
         if msg.is_cmd("search") {
-            let search_pattern = msg.cmd_arg();
-            ctx.db.save_conf("history.search_pattern", search_pattern);
-            ctx.db.save_conf("history.search_page", 1);
             self.beginning_search(msg, ctx);
             return;
         }
