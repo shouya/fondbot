@@ -3,6 +3,7 @@ pub mod afk;
 pub mod weather;
 // pub mod manager;
 pub mod history;
+pub mod reminder;
 
 use common::*;
 

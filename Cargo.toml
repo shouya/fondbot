@@ -7,7 +7,7 @@ authors = ["Shou Ya <github@lain.li>"]
 [dependencies]
 telegram-bot = { git = "https://github.com/telegram-rs/telegram-bot", rev = "4d1b670" }
 serde = "*"
-chrono = { version = "0.4.0", features = ["serde", "rustc-serialize"] }
+chrono = { version = "0.4", features = ["serde"] }
 serde_derive = "*"
 serde_json = "*"
 erased-serde = "0.1.3"

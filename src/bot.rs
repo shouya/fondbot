@@ -68,6 +68,7 @@ pub trait TgMessageExt {
   fn cmd_args(&self) -> Vec<String>;
   fn text_content(&self) -> Option<String>;
   fn is_force_reply(&self, prompt: &str) -> bool;
+  fn is_reply_to_bot(&self) -> bool;
 }
 
 impl TgMessageExt for tg::Message {
@@ -131,6 +132,15 @@ impl TgMessageExt for tg::Message {
       Some(box tg::MessageOrChannelPost::Message(ref refer)) => {
         refer.text_content() == Some(prompt.into())
       }
+      _ => false,
+    }
+  }
+
+  fn is_reply_to_bot(&self) -> bool {
+    match self.reply_to_message {
+      Some(box tg::MessageOrChannelPost::Message(ref refer)) => {
+        refer.from.username.as_ref().unwrap_or(&"".into()).ends_with("bot")
+      },
       _ => false,
     }
   }
