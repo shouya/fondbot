@@ -138,9 +138,12 @@ impl TgMessageExt for tg::Message {
 
   fn is_reply_to_bot(&self) -> bool {
     match self.reply_to_message {
-      Some(box tg::MessageOrChannelPost::Message(ref refer)) => {
-        refer.from.username.as_ref().unwrap_or(&"".into()).ends_with("bot")
-      },
+      Some(box tg::MessageOrChannelPost::Message(ref refer)) => refer
+        .from
+        .username
+        .as_ref()
+        .unwrap_or(&"".into())
+        .ends_with("bot"),
       _ => false,
     }
   }
@@ -170,3 +173,4 @@ impl TgCallbackQueryExt for tg::CallbackQuery {
     self.data.splitn(2, ".").nth(1)
   }
 }
+

@@ -26,3 +26,23 @@ pub trait BotExtension {
     self.name().into()
   }
 }
+
+pub trait InteractiveBuilder {
+  type Target;
+  type Prompt = &'static str;
+
+  fn build(&self) -> Option<Self::Target>;
+  fn prompt(
+    &self,
+    prompt: Self::Prompt,
+    msg: Option<&tg::Message>,
+    ctx: &Context,
+  );
+
+  fn on_message(&mut self, _msg: &tg::Message, _ctx: &Context) {}
+  fn on_callback(&mut self, _query: &tg::CallbackQuery, _ctx: &Context) {}
+
+  fn ready(&self) -> bool {
+    self.build().is_some()
+  }
+}

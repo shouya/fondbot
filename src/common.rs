@@ -4,11 +4,13 @@ pub use std::error::Error;
 pub use std::collections::{HashMap, HashSet};
 pub use std::fmt::{Debug, Display};
 pub use std::fmt::Write;
+pub use std::borrow::{Borrow, BorrowMut};
 
 pub use telegram_bot as tg;
 pub use tg::ParseMode::{Html, Markdown};
-pub use tg::{CanEditMessageReplyMarkup, CanEditMessageText,
-             CanReplySendMessage, CanSendChatAction, CanSendMessage};
+pub use tg::{CanAnswerCallbackQuery, CanEditMessageReplyMarkup,
+             CanEditMessageText, CanReplySendMessage, CanSendChatAction,
+             CanSendMessage};
 
 pub use tokio_core::reactor;
 
@@ -28,7 +30,7 @@ pub use regex::Regex;
 pub use bot::{reply, TgApiExt, TgCallbackQueryExt, TgMessageExt};
 
 pub use context::Context;
-pub use extensions::BotExtension;
+pub use extensions::{BotExtension, InteractiveBuilder};
 pub use context_extensions::ContextExtension;
 pub use db::Db;
 pub use services::request::request;
@@ -38,7 +40,8 @@ pub use context_extensions::safety_guard::SafetyGuard;
 
 pub use util::{ellipsis, escape_markdown};
 
-// pub use chrono;
+pub use chrono;
+pub use chrono::{Date, DateTime, Duration, Local};
 
 // lazy_static! {
 //   pub static ref GLOBAL_TIMEZONE: chrono::FixedOffset = chrono::FixedOffset::east(28800);
