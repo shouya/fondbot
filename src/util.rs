@@ -35,6 +35,9 @@ pub fn format_duration(d: &Duration) -> String {
   if d.num_seconds() >= 0 {
     str.push(format!("{} secs", d.num_seconds()));
   }
+  if d.num_seconds() < 0 {
+    str.push("<0 sec".into());
+  }
 
   str.join(" ")
 }

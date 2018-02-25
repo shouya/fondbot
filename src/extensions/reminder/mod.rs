@@ -120,15 +120,26 @@ impl ReminderPool {
     }
 
     self.set_reminder.take();
+    self.save(ctx);
   }
 
-  fn delete_reminder(&mut self, reminder: &Reminder) {
+  fn delete_reminder(&mut self, reminder: &Reminder, ctx: &Context) {
     let pred =
       |x: &Arc<RefCell<Reminder>>| x.deref().borrow().deref() == reminder;
 
     if let Some(loc) = self.reminders.iter().position(pred) {
       self.reminders.remove(loc);
     }
+    self.save(ctx);
+  }
+
+  fn save(&self, ctx: &Context) {
+    let reminders = self
+      .reminders
+      .iter()
+      .map(|x| x.deref().borrow().clone())
+      .collect::<Vec<_>>();
+    ctx.db.save_conf("reminders", reminders);
   }
 }
 
@@ -143,7 +154,6 @@ impl Reminder {
       .to_std()
       .unwrap();
 
-    println!("{:?}", duration);
     let timeout = reactor::Timeout::new(duration, &ctx.handle).unwrap();
     let bot = ctx.bot.clone();
     let chat_id = this.chat_id.clone();
