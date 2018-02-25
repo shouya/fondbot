@@ -32,18 +32,27 @@ pub fn format_duration(d: &Duration) -> String {
     str.push(format!("{} mins", d.num_minutes()));
     d = d - Duration::minutes(d.num_minutes());
   }
-  if d.num_seconds() >= 1 {
+  if d.num_seconds() >= 0 {
     str.push(format!("{} secs", d.num_seconds()));
   }
 
   str.join(" ")
 }
 
-pub fn format_time<TZ>(t: &DateTime<TZ>) -> String
+pub fn format_time<Tz>(t: &DateTime<Tz>) -> String
 where
-  TZ: TimeZone,
-  TZ::Offset: Display,
+  Tz: TimeZone,
+  Tz::Offset: Display,
 {
   let fmt = t.format("%Y-%m-%d %H:%M:%S %z");
+  format!("{}", fmt)
+}
+
+pub fn format_human_time<Tz>(t: &DateTime<Tz>) -> String
+where
+  Tz: TimeZone,
+  Tz::Offset: Display,
+{
+  let fmt = t.format("%a %h %e %k:%M:%S");
   format!("{}", fmt)
 }

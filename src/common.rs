@@ -39,7 +39,8 @@ pub use services::request::request;
 pub use context_extensions::name_map::NameMap;
 pub use context_extensions::safety_guard::SafetyGuard;
 
-pub use util::{ellipsis, escape_markdown, format_duration, format_time};
+pub use util::{ellipsis, escape_markdown, format_duration, format_human_time,
+               format_time};
 
 pub use chrono;
 pub use chrono::{Date, DateTime, Duration, Local, TimeZone};

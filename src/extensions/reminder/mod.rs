@@ -27,13 +27,17 @@ impl BotExtension for ReminderPool {
   where
     Self: Sized,
   {
-    let reminders = ctx
+    let reminders: RemindersType = ctx
       .db
       .load_conf::<Vec<Reminder>>("reminders")
       .unwrap_or(Vec::new())
       .into_iter()
       .map(|rem| Arc::new(RefCell::new(rem)))
       .collect();
+
+    for rem in reminders.iter() {
+      Reminder::settle(rem.clone(), ctx);
+    }
 
     ReminderPool {
       set_reminder: None,
