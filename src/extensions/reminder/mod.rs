@@ -17,7 +17,7 @@ pub struct Reminder {
 }
 
 type RemindersType = Vec<Arc<RefCell<Reminder>>>;
-struct ReminderPool {
+pub struct ReminderPool {
   reminders: RemindersType,
   set_reminder: Option<SetReminder>,
 }
@@ -44,6 +44,7 @@ impl BotExtension for ReminderPool {
   fn process(&mut self, message: &tg::Message, ctx: &Context) {
     if message.is_cmd("remind_me") {
       self.set_reminder = Some(SetReminder::init(message, ctx));
+      self.set_reminder.as_mut().unwrap().on_message(message, ctx);
     } else if message.is_reply_to_bot() && self.set_reminder.is_some() {
       self.set_reminder.as_mut().unwrap().on_message(message, ctx);
     }
@@ -118,7 +119,6 @@ impl ReminderPool {
   }
 
   fn delete_reminder(&mut self, reminder: &Reminder) {
-    use std::ops::Deref;
     let pred =
       |x: &Arc<RefCell<Reminder>>| x.deref().borrow().deref() == reminder;
 
@@ -130,27 +130,50 @@ impl ReminderPool {
 
 impl Reminder {
   fn settle(this: Arc<RefCell<Reminder>>, ctx: &Context) {
-    let this = (*this).borrow();
+    let that = this.clone();
+    let this = this.deref().borrow();
 
-    let duration = Local::now()
-      .signed_duration_since(this.remind_at)
+    let duration = this
+      .remind_at
+      .signed_duration_since(Local::now())
       .to_std()
       .unwrap();
 
+    println!("{:?}", duration);
     let timeout = reactor::Timeout::new(duration, &ctx.handle).unwrap();
     let bot = ctx.bot.clone();
     let chat_id = this.chat_id.clone();
+    let message_id = this.message_id.clone();
     let text = format!("It's time for {}", this.content);
-    let that = this.clone();
 
     let future = timeout.then(move |_| {
-      let req = tg::SendMessage::new(chat_id, text);
-      if !that.borrow().deleted {
+      let mut this = that.deref().borrow_mut();
+      let req = tg::SendMessage::new(chat_id, text)
+        .reply_to(message_id)
+        .clone();
+
+      if !this.deleted {
         bot.spawn(req);
+        this.deleted = true;
       }
       ok(())
     });
 
     ctx.handle.spawn(future);
+  }
+
+  fn describe(&self) -> String {
+    let now = Local::now();
+    let mut output = Vec::new();
+
+    output.push(format!("It's time for {}", self.content));
+    output.push(format!(
+      "Set at: {} ({} ago)",
+      format_time(&self.set_at),
+      format_duration(&self.set_at.signed_duration_since(now))
+    ));
+    output.push(format!("Alert at: {}", format_time(&self.set_at)));
+
+    output.join("\n")
   }
 }

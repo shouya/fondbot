@@ -28,11 +28,19 @@ impl InteractiveBuilder for SetReminder {
       content: self.content.clone().unwrap(),
       chat_id: self.chat_id,
       message_id: self.message_id,
-      deleted: false
+      deleted: false,
     })
   }
 
   fn on_message(&mut self, msg: &tg::Message, ctx: &Context) {
+    if msg.is_cmd("remind_me") {
+      if self.stage == "content" {
+        self.prompt("set_content", Some(msg), ctx);
+      } else {
+        self.prompt("set_time", Some(msg), ctx);
+      }
+      return;
+    }
     if !msg.is_reply_to_bot() {
       return;
     }
@@ -155,7 +163,7 @@ impl SetReminder {
     let today = Local::today();
     let tmr = today.succ();
 
-    match key {
+    let result = match key {
       "1min" => now + Duration::minutes(1),
       "5min" => now + Duration::minutes(5),
       "10min" => now + Duration::minutes(10),
@@ -179,6 +187,6 @@ impl SetReminder {
       _ => now,
     };
 
-    now
+    result
   }
 }

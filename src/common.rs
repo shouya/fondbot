@@ -5,6 +5,7 @@ pub use std::collections::{HashMap, HashSet};
 pub use std::fmt::{Debug, Display};
 pub use std::fmt::Write;
 pub use std::borrow::{Borrow, BorrowMut};
+pub use std::ops::Deref;
 
 pub use telegram_bot as tg;
 pub use tg::ParseMode::{Html, Markdown};
@@ -38,10 +39,10 @@ pub use services::request::request;
 pub use context_extensions::name_map::NameMap;
 pub use context_extensions::safety_guard::SafetyGuard;
 
-pub use util::{ellipsis, escape_markdown};
+pub use util::{ellipsis, escape_markdown, format_duration, format_time};
 
 pub use chrono;
-pub use chrono::{Date, DateTime, Duration, Local};
+pub use chrono::{Date, DateTime, Duration, Local, TimeZone};
 
 // lazy_static! {
 //   pub static ref GLOBAL_TIMEZONE: chrono::FixedOffset = chrono::FixedOffset::east(28800);

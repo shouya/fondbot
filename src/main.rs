@@ -88,6 +88,7 @@ fn main() {
     ctx.plug_ext::<afk::Afk>();
     ctx.plug_ext::<weather::Weather>();
     ctx.plug_ext::<history::Searcher>();
+    ctx.plug_ext::<reminder::ReminderPool>();
 
     let serve = futures::lazy(|| {
         info!(logger, "Started serving");
