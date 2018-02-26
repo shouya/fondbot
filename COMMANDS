@@ -6,4 +6,7 @@ enable_search_for_me - enable search for my messages
 weather - check weather
 add_loc - <name> <longlat> - add location for weather
 del_loc - <name> del location for weather
+remind_me - [take pill] - set reminder
+list_reminders - list reminders
+
 

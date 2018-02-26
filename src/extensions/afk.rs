@@ -1,7 +1,6 @@
 use common::*;
 
 use chrono::Duration;
-use chrono::prelude::*;
 
 lazy_static! {
     static ref NOTIFY_INTERVAL: Duration = Duration::seconds(60);

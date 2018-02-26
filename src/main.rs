@@ -4,6 +4,7 @@
 #![feature(box_patterns)]
 #![feature(associated_type_defaults)]
 #![feature(box_syntax)]
+#![feature(option_filter)]
 
 #[macro_use]
 pub extern crate diesel;

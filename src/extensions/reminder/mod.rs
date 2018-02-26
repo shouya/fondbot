@@ -27,11 +27,13 @@ impl BotExtension for ReminderPool {
   where
     Self: Sized,
   {
+    let now = Local::now();
     let reminders: RemindersType = ctx
       .db
       .load_conf::<Vec<Reminder>>("reminders")
       .unwrap_or(Vec::new())
       .into_iter()
+      .filter(|x| x.remind_at >= now && !x.deleted)
       .map(|rem| Arc::new(RefCell::new(rem)))
       .collect();
 
@@ -49,16 +51,22 @@ impl BotExtension for ReminderPool {
     if message.is_cmd("remind_me") {
       self.set_reminder = Some(SetReminder::init(message, ctx));
       self.set_reminder.as_mut().unwrap().on_message(message, ctx);
+      self.settle_new_reminder(Some(message), None, ctx);
     } else if message.is_reply_to_bot() && self.set_reminder.is_some() {
       self.set_reminder.as_mut().unwrap().on_message(message, ctx);
+      self.settle_new_reminder(Some(message), None, ctx);
+    } else if message.is_cmd("list_reminders") {
+      self.list_reminders(message, ctx);
     }
-    self.settle_new_reminder(Some(message), None, ctx);
   }
   fn process_callback(&mut self, query: &tg::CallbackQuery, ctx: &Context) {
     if self.set_reminder.is_some() {
       self.set_reminder.as_mut().unwrap().on_callback(query, ctx);
+      self.settle_new_reminder(None, Some(query), ctx);
+    } else if query.key().filter(|x| x.starts_with("del_")).is_some() {
+      // TODO
+      // self.delete_reminder(query, ctx)
     }
-    self.settle_new_reminder(None, Some(query), ctx);
   }
   fn name(&self) -> &str {
     "reminder"
@@ -66,29 +74,13 @@ impl BotExtension for ReminderPool {
 }
 
 impl ReminderPool {
-  fn set_reminder_message(&self, message: &tg::Message) -> bool {
-    message.is_cmd("remind_me")
-      || (message.is_reply_to_bot() && self.set_reminder.is_some())
-  }
-
-  fn set_reminder(
-    &mut self,
-    message: Option<&tg::Message>,
-    callback: Option<&tg::CallbackQuery>,
-    ctx: &Context,
-  ) {
-    // initiate set reminder
-    if self.set_reminder.is_none() {
-      let message = message.unwrap();
-      // self.set_reminder = Some(SetReminder::init());
-    }
-
-    // if self.set_reminder.unwrap().remind_at.is_none() {
-    //   self.prompt_reminder_time(&self, message, ctx);
-    // } else if self.set_reminder.unwrap().content.is_none() {
-    //   let req = message.text_reply("What do you want to be reminded about");
-    //   ctx.bot.spawn(req);
-    // }
+  fn list(&self) -> Vec<Reminder> {
+    self
+      .reminders
+      .iter()
+      .map(|x| x.deref().borrow().clone())
+      .filter(|x| !x.deleted)
+      .collect::<Vec<_>>()
   }
 
   fn settle_new_reminder(
@@ -123,6 +115,23 @@ impl ReminderPool {
     self.save(ctx);
   }
 
+  fn list_reminders(&mut self, msg: &tg::Message, ctx: &Context) {
+    let reminders = self.list();
+    let mut text = String::new();
+
+    for (i, rem) in reminders.into_iter().enumerate() {
+      write!(
+        text,
+        "{}: {} (/del_{})\n",
+        format_time(&rem.remind_at),
+        rem.content,
+        i
+      );
+    }
+
+    ctx.bot.spawn(msg.chat.text(text));
+  }
+
   fn delete_reminder(&mut self, reminder: &Reminder, ctx: &Context) {
     let pred =
       |x: &Arc<RefCell<Reminder>>| x.deref().borrow().deref() == reminder;
@@ -138,6 +147,7 @@ impl ReminderPool {
       .reminders
       .iter()
       .map(|x| x.deref().borrow().clone())
+      .filter(|x| !x.deleted)
       .collect::<Vec<_>>();
     ctx.db.save_conf("reminders", reminders);
   }
@@ -156,20 +166,10 @@ impl Reminder {
 
     let timeout = reactor::Timeout::new(duration, &ctx.handle).unwrap();
     let bot = ctx.bot.clone();
-    let chat_id = this.chat_id.clone();
-    let message_id = this.message_id.clone();
-    let text = format!("It's time for {}", this.content);
 
     let future = timeout.then(move |_| {
       let mut this = that.deref().borrow_mut();
-      let req = tg::SendMessage::new(chat_id, text)
-        .reply_to(message_id)
-        .clone();
-
-      if !this.deleted {
-        bot.spawn(req);
-        this.deleted = true;
-      }
+      this.deref_mut().send_alert(&bot);
       ok(())
     });
 
@@ -189,5 +189,16 @@ impl Reminder {
     output.push(format!("Alert at: {}", format_time(&self.set_at)));
 
     output.join("\n")
+  }
+
+  fn send_alert(&mut self, bot: &tg::Api) {
+    let req = tg::SendMessage::new(self.chat_id, self.describe())
+      .reply_to(self.message_id)
+      .clone();
+
+    if !self.deleted {
+      bot.spawn(req);
+      self.deleted = true;
+    }
   }
 }
