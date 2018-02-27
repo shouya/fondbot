@@ -1,12 +1,12 @@
 afk - [reason] - set afk
 noafk - no afk
+remind_me - [take pill] - set reminder
+weather - check weather
 search - [pattern] - search through history
 enable_search_for_chat - enable recording history and searching in this group
 enable_search_for_me - enable search for my messages
-weather - check weather
 add_loc - <name> <longlat> - add location for weather
 del_loc - <name> del location for weather
-remind_me - [take pill] - set reminder
 list_reminders - list reminders
 
 
