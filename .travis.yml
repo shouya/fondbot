@@ -17,7 +17,7 @@ script:
 
 before_deploy:
   - pushd target/$TARGET/release
-  - tar cJf $PROJECT-$TARGET.tar.xz fondbot
+  - tar cJf fondbot-$TARGET.tar.xz fondbot
   - popd
   - mv target/$TARGET/release/*.tar.xz .
 
