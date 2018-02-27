@@ -52,6 +52,14 @@ impl InteractiveBuilder for SetReminder {
     msg
       .text_content()
       .map(|t| {
+        let reply_msg = msg.reply_to_message.as_ref().unwrap().deref();
+        let text = format!("Notification content set to {}", t);
+        let req = reply_msg
+          .edit_text(text)
+          .reply_markup(tg::ReplyKeyboardRemove::new())
+          .clone();
+
+        ctx.bot.spawn(req);
         self.prompt("set_time", None, ctx);
         self.content = Some(t);
         self.stage = "time";
@@ -102,7 +110,7 @@ impl InteractiveBuilder for SetReminder {
       "invalid_time" => {
         let alert = "Duration too short or negative, please try another one";
         ctx.bot.spawn(msg.unwrap().chat.text(alert))
-      },
+      }
       _ => {}
     }
   }

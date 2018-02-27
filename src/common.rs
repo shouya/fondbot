@@ -5,7 +5,7 @@ pub use std::collections::{HashMap, HashSet};
 pub use std::fmt::{Debug, Display};
 pub use std::fmt::Write;
 pub use std::borrow::{Borrow, BorrowMut};
-pub use std::ops::{Deref, DerefMut};
+pub use std::ops::{Deref, DerefMut, Drop};
 
 pub use telegram_bot as tg;
 pub use tg::ParseMode::{Html, Markdown};

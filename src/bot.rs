@@ -63,12 +63,25 @@ pub trait TgMessageExt {
     let name = self.cmd_name();
     name.is_some() && name.unwrap().as_str() == pat
   }
+  fn is_cmd_prefix(&self, prefix: &str) -> bool {
+    let name = self.cmd_name();
+    name.filter(|x| x.starts_with(prefix)).is_some()
+  }
   fn cmd_name(&self) -> Option<String>;
   fn cmd_arg(&self) -> Option<String>;
   fn cmd_args(&self) -> Vec<String>;
   fn text_content(&self) -> Option<String>;
   fn is_force_reply(&self, prompt: &str) -> bool;
   fn is_reply_to_bot(&self) -> bool;
+  fn cmd_suffix(&self, prefix: &str) -> Option<String> {
+    self.cmd_name().and_then(|mut cmd| {
+      if !cmd.starts_with(prefix) {
+        None
+      } else {
+        Some(cmd.split_off(prefix.len()))
+      }
+    })
+  }
 }
 
 impl TgMessageExt for tg::Message {
@@ -173,4 +186,3 @@ impl TgCallbackQueryExt for tg::CallbackQuery {
     self.data.splitn(2, ".").nth(1)
   }
 }
-
