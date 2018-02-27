@@ -89,6 +89,7 @@ impl InteractiveBuilder for SetReminder {
       };
       self.remind_at = Some(new);
       self.prompt("set_time", Some(&query.message), ctx);
+      ctx.bot.spawn(query.acknowledge());
     }
   }
 
