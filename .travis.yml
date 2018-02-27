@@ -1,46 +1,23 @@
 language: rust
 cache: cargo
 
+rust: nightly
+addons:
+  apt:
+    packages:
+      - gcc-multilib
+      - libssl-dev
+
 env:
-  global:
-    # This will be part of the release tarball
-    - PROJECT=fondbot
-
-# AFAICT There are a few ways to set up the build jobs. This one is not the DRYest but I feel is the
-# easiest to reason about.
-matrix:
-  include:
-    - os: linux
-      rust: nightly
-      env: TARGET=x86_64-unknown-linux-gnu
-      addons:
-        apt:
-          packages:
-            - gcc-multilib
-            - libssl-dev
-  allow_failures:
-    # TODO You might need to allow failures for some target on some channel for some reason. Below
-    # there's one (commented out) example of how to do that. Just change the OS, channel and TARGET
-    # as needed.
-    # - os: linux
-    #   rust: stable
-    #   env: TARGET=x86_64-unknown-linux-gnu
-
-before_install:
-  - export PATH="$PATH:$HOME/.cargo/bin"
-
-install:
-  - rustc -V
-  - cargo -V
-
+  - TARGET=x86_64-unknown-linux-gnu
+  
 script:
   - cargo build --target $TARGET --release
-#  - cargo test --target $TARGET --release
-  - file target/$TARGET/release/$PROJECT
+  - file target/$TARGET/release/fondbot
 
 before_deploy:
   - pushd target/$TARGET/release
-  - tar cJf $PROJECT-$TARGET.tar.xz $PROJECT
+  - tar cJf $PROJECT-$TARGET.tar.xz fondbot
   - popd
   - mv target/$TARGET/release/*.tar.xz .
 
@@ -49,7 +26,7 @@ deploy:
   api_key:
     secure: P/v9YzGb8iMutd2ZWnXQi0+rqnBLgvW6jnXkeEqlOcPHffx9i0GWSoXzEhFqyI5rXXGxJQZbEkKAYW6WERSadruiLeC5APwWTvUf97xAIe6yJZtLLm99FyOKO1sA6FIjQ4bHMT9q2dPqawSg2fW75ZvDx6Pig8ajfmdBNHbl3JzJz1itLwhJRjfgMNWgzJSg/rIdLiEPAB/aP03hsjTlgRkUKTvo6/4ER5ElhkvzUbXZmiCRFdD8yfPwm2j6IR35731dSVcgvYpGwyQylrt9ZBbirdxYbjWMyVocm3/o6Va2uXqe9cm8PQLc2gI4z+l/ZaKfmiCfZjlCkMr0SmrNVssBbTk/rWLnA8AlFNuI1nMoebaVdzV51gFZJabXDUJZ8SOzfCktq+rJMPoq+nAqr+HKqEe/9B3LI84/U2atnfnwE+USHqfMBl4PpgSxbXKydlGIPqvb9TXYG49Y7kJkNK2zHABe8IEXD4FJZJIx75qQgkB87JdTAmIFsrkNZBFxlTztgOr0I9oVNnX4oJL0PtOUmxq8HQTHIiMaGir2aLTDLEkNN1MbRxmu1/rZDDIjhjfCaPTZVzXnK97BxUXR5PmzgR0UMc0rPEXSBcEuT47Dwob1ri3VaOUWvmDSVKE8q+DbSBXM3AZpsfS+OH8CPQQfd+HZrJ4jaaQyY0B+IWU=
   file_glob: false
-  file: $PROJECT-$TARGET.tar.xz
+  file: fondbot-$TARGET.tar.xz
   # don't delete the artifacts from previous phases
   skip_cleanup: true
 
