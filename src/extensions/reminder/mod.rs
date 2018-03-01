@@ -229,7 +229,7 @@ impl Reminder {
     output.push(format!(
       "Set at: {} ({} ago)",
       format_time(&self.set_at),
-      format_duration(&self.set_at.signed_duration_since(now))
+      format_duration(&now.signed_duration_since(self.set_at))
     ));
     output.push(format!("Alert at: {}", format_time(&self.remind_at)));
 
