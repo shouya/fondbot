@@ -123,9 +123,9 @@ impl Display for Caiyun {
         let skycon = self.compress_skycon();
 
         write!(f, "*Conditions*: {}\n", skycon).ok();
-        write!(f, "*Temperature*: {}℃ ({}-{}℃)\n", temp_curr, temp_lo, temp_hi).ok();
-        write!(f, "*Humidity*: {:}-{:}%\n", hmd_lo * 100.0, hmd_hi * 100.0).ok();
-        write!(f, "*AQI*: {}", self.fmt_aqi()).ok();
+        write!(f, "*Temperature*: {:.0}℃ ({:.0}-{:.0}℃)\n", temp_curr, temp_lo, temp_hi).ok();
+        write!(f, "*Humidity*: {:.0}-{:.0}%\n", hmd_lo * 100.0, hmd_hi * 100.0).ok();
+        write!(f, "*AQI*: {:.0}", self.fmt_aqi()).ok();
 
         Ok(())
     }
