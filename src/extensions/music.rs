@@ -122,12 +122,14 @@ impl Music {
     let bot = ctx.bot.clone();
 
     let fut = audio_fut.join(file_fut).and_then(move |(audio, file_url)| {
+      println!("{:?}", audio);
       let mut req = msg.chat.send_audio_url(file_url);
-      req.caption(audio.url());
-      req.title(audio.title.as_ref());
-      if audio.performer.is_some() {
-        req.performer(audio.performer.as_ref().unwrap().as_str());
-      }
+      let out = if audio.performer.is_some() {
+        format!("{} - {}", audio.performer.as_ref().unwrap(), audio.title)
+      } else {
+        format!("{}", audio.title)
+      };
+      req.caption(out);
       bot.spawn(req);
       ok(())
     });
