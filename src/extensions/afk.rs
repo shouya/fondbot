@@ -104,9 +104,15 @@ impl BotExtension for Afk {
             return;
         }
 
-        self.report_afk(msg, ctx);
         ctx.db.save_conf("afk", &self);
-        ctx.set_bypass();
+
+        self.report_afk(msg, ctx);
+
+        if let tg::MessageChat::Private(_) = msg.chat {
+            // don't bypass private chat
+        } else {
+            ctx.set_bypass();
+        }
     }
 
     fn report(&self) -> String {
