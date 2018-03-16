@@ -4,6 +4,7 @@ pub mod weather;
 // pub mod manager;
 pub mod history;
 pub mod reminder;
+pub mod music;
 
 use common::*;
 

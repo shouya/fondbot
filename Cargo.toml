@@ -27,6 +27,7 @@ diesel_codegen = { version = "0.15.0", features = ["sqlite"] }
 tokio-core = "*"
 tokio-timer = "*"
 futures = "*"
+url = "1.7.0"
 
 
 [dependencies.clippy]

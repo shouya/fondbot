@@ -36,6 +36,8 @@ pub use context_extensions::ContextExtension;
 pub use db::Db;
 pub use services::request::request;
 
+pub use url::Url;
+
 pub use context_extensions::name_map::NameMap;
 pub use context_extensions::safety_guard::SafetyGuard;
 

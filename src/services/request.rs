@@ -1,13 +1,11 @@
-extern crate hyper;
-extern crate hyper_tls;
-
 use common::*;
 
 use serde::de::DeserializeOwned;
 use serde_json::de;
 
-use self::hyper::{header, Client, Method, Request, Uri};
-use self::hyper_tls::HttpsConnector;
+use hyper;
+use hyper::{header, Client, Method, Request, Uri};
+use hyper_tls::HttpsConnector;
 
 use std::str::FromStr;
 use std::error::Error;
