@@ -5,7 +5,7 @@ authors = ["Shou Ya <github@lain.li>"]
 
 
 [dependencies]
-telegram-bot = { git = "https://github.com/shouya/telegram-bot-rust", rev = "3a2bd13" }
+telegram-bot = { git = "https://github.com/shouya/telegram-bot-rust", rev = "8b038c7e5" }
 serde = "*"
 chrono = { version = "0.4", features = ["serde"] }
 serde_derive = "*"
@@ -28,6 +28,7 @@ tokio-core = "*"
 tokio-timer = "*"
 futures = "*"
 url = "1.7.0"
+futures-await = "0.1"
 
 
 [dependencies.clippy]

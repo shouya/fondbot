@@ -9,9 +9,7 @@ pub use std::ops::{Deref, DerefMut, Drop};
 
 pub use telegram_bot as tg;
 pub use tg::ParseMode::{Html, Markdown};
-pub use tg::{CanAnswerCallbackQuery, CanEditMessageReplyMarkup,
-             CanEditMessageText, CanReplySendMessage, CanSendChatAction,
-             CanSendMessage};
+pub use tg::prelude::*;
 
 pub use tokio_core::reactor;
 

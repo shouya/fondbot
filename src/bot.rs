@@ -143,7 +143,7 @@ impl TgMessageExt for tg::Message {
   fn is_force_reply(&self, prompt: &str) -> bool {
     match self.reply_to_message {
       Some(box tg::MessageOrChannelPost::Message(ref refer)) => {
-        pefer.text_content() == Some(prompt.into())
+        refer.text_content() == Some(prompt.into())
       }
       _ => false,
     }

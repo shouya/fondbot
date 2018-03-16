@@ -1,10 +1,11 @@
-#![feature(custom_attribute)]
+// #![feature(custom_attribute)]
 #![feature(iterator_for_each)]
 #![feature(conservative_impl_trait)]
 #![feature(box_patterns)]
 #![feature(associated_type_defaults)]
 #![feature(box_syntax)]
 #![feature(option_filter)]
+#![feature(proc_macro, conservative_impl_trait, generators)]
 
 #[macro_use]
 pub extern crate diesel;
@@ -22,7 +23,9 @@ extern crate slog_async;
 extern crate slog_term;
 
 pub extern crate chrono;
-pub extern crate futures;
+
+pub extern crate futures_await as futures;
+// pub extern crate futures;
 pub extern crate regex;
 pub extern crate serde;
 pub extern crate serde_json;

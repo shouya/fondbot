@@ -11,7 +11,7 @@ pub struct Music {
 struct AudioDetail {
   id: u64,
   title: String,
-  composer: Option<String>,
+  performer: Option<String>,
   album: Option<String>,
 }
 
@@ -59,22 +59,22 @@ impl AudioDetail {
     );
     let object = song.and_then(move |song: Value| {
       let title = song["name"].as_str().unwrap().into();
-      let composer = song["artists"][0]["name"].as_str().map(|x| x.into());
+      let performer = song["artists"][0]["name"].as_str().map(|x| x.into());
       let album = song["album"][0]["name"].as_str().map(|x| x.into());
 
       ok(Self {
         id,
         title,
-        composer,
+        performer,
         album,
       })
     });
     box object
   }
+}
 
-  fn get_audio_url(&self) -> Box<Future<Item = String, Error = ()>> {
-    box ok(format!("https://lain.li/netease_music/{}.mp3", self.id))
-  }
+fn get_audio_url(id: u64) -> Box<Future<Item = String, Error = ()>> {
+  box ok(format!("https://lain.li/netease_music/{}.mp3", id))
 }
 
 impl BotExtension for Music {
@@ -104,10 +104,10 @@ impl Music {
   fn handle_message(
     &self,
     url: Option<String>,
-    msg: tg::Message,
-    ctx: Context,
+    msg: &tg::Message,
+    ctx: &Context,
   ) {
-    let id = url.map(|x| parse_song_id(&x));
+    let id = url.and_then(|x| parse_song_id(&x));
     if id.is_none() {
       if !self.auto_parse {
         ctx.bot.spawn(reply(msg, "Invalid netease url"));
@@ -116,8 +116,22 @@ impl Music {
     }
 
     let id = id.unwrap();
+    let audio_fut = AudioDetail::from_id(id, &ctx.handle);
+    let file_fut = get_audio_url(id);
+    let msg = msg.clone();
+    let bot = ctx.bot.clone();
 
-    let audio_fut = AudioDetail::from_id(id, ctx.handle.clone());
-    audio_fut.and_then(|audio| audio)
+    let fut = audio_fut.join(file_fut).and_then(move |(audio, file_url)| {
+      let mut req = msg.chat.send_audio_url(file_url);
+      req.caption(audio.url());
+      req.title(audio.title.as_ref());
+      if audio.performer.is_some() {
+        req.performer(audio.performer.as_ref().unwrap().as_str());
+      }
+      bot.spawn(req);
+      ok(())
+    });
+
+    ctx.handle.spawn(fut);
   }
 }
