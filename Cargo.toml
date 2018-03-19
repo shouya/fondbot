@@ -28,6 +28,7 @@ tokio-core = "*"
 tokio-timer = "*"
 futures = "*"
 url = "1.7.0"
+curl = "*"
 futures-await = "0.1"
 
 

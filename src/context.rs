@@ -20,14 +20,14 @@ impl Context {
     let names = NameMap::new(&db);
 
     Context {
-      bot: bot,
-      handle: handle,
       bypass: Cell::new(false),
       exts: RefCell::new(vec![]),
-      logger: logger,
-      db: db,
-      guard: guard,
-      names: names,
+      bot,
+      handle,
+      logger,
+      db,
+      guard,
+      names,
     }
   }
 

@@ -1,6 +1,9 @@
 use common::*;
 
+use futures::prelude::*;
+
 use serde_json::Value;
+use curl::easy::Easy;
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Music {
@@ -16,25 +19,12 @@ struct AudioDetail {
 }
 
 fn parse_song_id(url: &str) -> Option<u64> {
-  if !url.starts_with("http") {
-    return None;
+  lazy_static! {
+    static ref RE: Regex = Regex::new(r"http(s?)://music\.163\.com/.*?/song\?id=(\d+)").unwrap();
   }
-  Url::parse(url)
-    .ok()
-    .and_then(|url| {
-      if url.host_str() != Some("music.163.com") {
-        return None;
-      }
-      url.fragment().map(|x| x.to_string()).clone()
-    })
-    .and_then(|fragment| {
-      let prefix = "/song?id=";
-      if !fragment.starts_with(prefix) {
-        return None;
-      }
-
-      fragment[prefix.len()..].parse::<u64>().ok()
-    })
+  RE.captures(url).and_then(|cap| {
+    cap[2].parse::<u64>().ok()
+  })
 }
 
 impl AudioDetail {
@@ -46,7 +36,8 @@ impl AudioDetail {
     id: u64,
     handle: &reactor::Handle,
   ) -> Box<Future<Item = Self, Error = ()>> {
-    let api_url = format!("http://music.163.com/api/song/detail/?ids=[{}]", id);
+    let api_url =
+      format!("https://music.163.com/api/song/detail/?ids=[{}]", id);
     let song = request(handle, &api_url).map_err(|_| ()).and_then(
       move |value: Value| {
         let song = &value["songs"][0];
@@ -71,10 +62,6 @@ impl AudioDetail {
     });
     box object
   }
-}
-
-fn get_audio_url(id: u64) -> Box<Future<Item = String, Error = ()>> {
-  box ok(format!("https://lain.li/netease_music/{}.mp3", id))
 }
 
 impl BotExtension for Music {
@@ -114,26 +101,101 @@ impl Music {
       }
       return;
     }
-
     let id = id.unwrap();
-    let audio_fut = AudioDetail::from_id(id, &ctx.handle);
-    let file_fut = get_audio_url(id);
-    let msg = msg.clone();
+
+    info!(ctx.logger, "Found music query: {}", id);
+
+    let detail_fut = AudioDetail::from_id(id, &ctx.handle);
+    let file_fut = futures::lazy(move || Self::download(id));
     let bot = ctx.bot.clone();
+    let msg = msg.clone();
 
-    let fut = audio_fut.join(file_fut).and_then(move |(audio, file_url)| {
-      println!("{:?}", audio);
-      let mut req = msg.chat.send_audio_url(file_url);
-      let out = if audio.performer.is_some() {
-        format!("{} - {}", audio.performer.as_ref().unwrap(), audio.title)
-      } else {
-        format!("{}", audio.title)
-      };
-      req.caption(out);
-      bot.spawn(req);
-      ok(())
-    });
+    let download_action = bot
+      .send(msg.chat.chat_action(tg::ChatAction::RecordAudio))
+      .map_err(|_| ());
+    let upload_action = bot
+      .send(msg.chat.chat_action(tg::ChatAction::UploadAudio))
+      .map_err(|_| ());
 
-    ctx.handle.spawn(fut);
+    let download_fut = download_action
+      .join3(detail_fut, file_fut)
+      .and_then(move |(_, detail, file)| ok((detail, file)));
+
+    let upload_fut = upload_action.join(download_fut).and_then(
+      move |(_, (detail, audio_data))| {
+        let mut options: HashMap<&'static str, String> = HashMap::new();
+        options.insert("chat_id", format!("{}", msg.chat.id()));
+        options.insert("title", detail.title);
+        options.insert("reply_to_message_id", format!("{}", msg.id));
+        if detail.performer.is_some() {
+          options.insert("performer", detail.performer.unwrap());
+        }
+
+        // currently unable to get token out of bot yet.
+        let token = env::var("TELEGRAM_BOT_TOKEN")
+          .expect("TELEGRAM_BOT_TOKEN env var not defined");
+
+        Self::send_audio(token, audio_data, options);
+        ok(())
+      },
+    );
+
+    ctx.handle.spawn(upload_fut);
+  }
+
+  #[async]
+  fn download(id: u64) -> Result<Vec<u8>, ()> {
+    use curl::easy::List;
+    let mut curl = Easy::new();
+    let mut buf = Vec::new();
+    let mut headers = List::new();
+
+    let url =
+      format!("http://music.163.com/song/media/outer/url?id={}.mp3", id);
+    curl.url(&url).unwrap();
+
+    headers.append("X-Real-IP 36.110.107.162").unwrap();
+
+    curl.http_headers(headers).unwrap();
+    curl.follow_location(true).unwrap();
+    // FnMut(&[u8]) -> Result<usize, WriteError> + Send + 'static
+    {
+      let mut transfer = curl.transfer();
+      transfer
+        .write_function(|data| {
+          buf.extend_from_slice(data);
+          Ok(data.len())
+        })
+        .unwrap();
+      transfer.perform().unwrap();
+    }
+    Ok(buf)
+  }
+
+  fn send_audio<'a>(
+    bot_token: String,
+    audio: Vec<u8>,
+    options: HashMap<&'static str, String>,
+  ) {
+    use curl::easy::Form;
+    let mut form = Form::new();
+    let mut curl = Easy::new();
+
+    {
+      let mut part = form.part("audio");
+      part.buffer("music.mp3", audio);
+      part.add().unwrap();
+    }
+
+    for (k, v) in options.iter() {
+      let mut part = form.part(k);
+      part.contents(v.as_bytes());
+      part.add().unwrap();
+    }
+
+    let url = format!("https://api.telegram.org/bot{}/sendAudio", bot_token);
+    curl.url(&url).unwrap();
+    curl.httppost(form).unwrap();
+    curl.perform().expect("Failed sending audio");
   }
 }

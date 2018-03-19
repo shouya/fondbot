@@ -32,6 +32,7 @@ pub extern crate serde_json;
 pub extern crate telegram_bot;
 pub extern crate tokio_core;
 
+pub extern crate curl;
 pub extern crate hyper;
 pub extern crate hyper_tls;
 
@@ -105,7 +106,8 @@ fn main() {
     ok(())
   }).and_then(|_| ctx.serve());
 
-  let future = consume_updates.then(|_| serve);
+  // let future = consume_updates.then(|_| serve);
+  let future = serve;
 
   core.run(future).ok();
 }
