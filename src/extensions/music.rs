@@ -154,7 +154,7 @@ impl Music {
       format!("http://music.163.com/song/media/outer/url?id={}.mp3", id);
     curl.url(&url).unwrap();
 
-    headers.append("X-Real-IP 36.110.107.162").unwrap();
+    headers.append("X-Real-IP: 36.110.107.162").unwrap();
 
     curl.http_headers(headers).unwrap();
     curl.follow_location(true).unwrap();
