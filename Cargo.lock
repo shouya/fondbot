@@ -353,7 +353,7 @@ dependencies = [
  "env_logger 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "erased-serde 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures-await 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-await 0.1.1 (git+https://github.com/ngg/futures-await?branch=0.1)",
  "hyper 0.11.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper-tls 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -406,18 +406,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "futures-await"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+version = "0.1.1"
+source = "git+https://github.com/ngg/futures-await?branch=0.1#737dc0af7fa952c74ea381893f383ee5fc2ed5bb"
 dependencies = [
  "futures 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures-await-async-macro 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures-await-await-macro 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-await-async-macro 0.1.2 (git+https://github.com/ngg/futures-await?branch=0.1)",
+ "futures-await-await-macro 0.1.1 (git+https://github.com/ngg/futures-await?branch=0.1)",
 ]
 
 [[package]]
 name = "futures-await-async-macro"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+version = "0.1.2"
+source = "git+https://github.com/ngg/futures-await?branch=0.1#737dc0af7fa952c74ea381893f383ee5fc2ed5bb"
 dependencies = [
  "futures-await-quote 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-await-syn 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -427,8 +427,8 @@ dependencies = [
 
 [[package]]
 name = "futures-await-await-macro"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+version = "0.1.1"
+source = "git+https://github.com/ngg/futures-await?branch=0.1#737dc0af7fa952c74ea381893f383ee5fc2ed5bb"
 
 [[package]]
 name = "futures-await-quote"
@@ -1502,9 +1502,9 @@ dependencies = [
 "checksum fuchsia-zircon 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "2e9763c69ebaae630ba35f74888db465e49e259ba1bc0eda7d06f4a067615d82"
 "checksum fuchsia-zircon-sys 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
 "checksum futures 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)" = "0bab5b5e94f5c31fc764ba5dd9ad16568aae5d4825538c01d6bca680c9bf94a7"
-"checksum futures-await 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "84431acb0f168d02bd7727ad9fa385ff877e46d6018efad17ca509ae3bf5457c"
-"checksum futures-await-async-macro 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2868c9550459b113f8a656bd8f665bcdcfffb794e3fe5fbeaf5734325d18c2b5"
-"checksum futures-await-await-macro 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b7adba18b51fd888a24f6bd41c85e4f544a7089b15f84242350c014f9fdbf895"
+"checksum futures-await 0.1.1 (git+https://github.com/ngg/futures-await?branch=0.1)" = "<none>"
+"checksum futures-await-async-macro 0.1.2 (git+https://github.com/ngg/futures-await?branch=0.1)" = "<none>"
+"checksum futures-await-await-macro 0.1.1 (git+https://github.com/ngg/futures-await?branch=0.1)" = "<none>"
 "checksum futures-await-quote 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f310765f0efc9c12ffb4887ca48d87a71c44ba531d9ba23055681a879f98ab75"
 "checksum futures-await-syn 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)" = "90dcf027151897fe50205762efdec791be0e1e2a018d0ae077f72aa0abbf947f"
 "checksum futures-await-synom 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a7c84de0ba04a67d7fc0fb4e3218ba539da65890549922d9d2bc874ba6240030"

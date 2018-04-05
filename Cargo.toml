@@ -28,7 +28,7 @@ tokio-timer = "*"
 futures = "*"
 url = "1.7.0"
 curl = "*"
-futures-await = "0.1"
+futures-await = { git = "https://github.com/ngg/futures-await", branch = "0.1", version = "0.1" }
 
 
 [dependencies.clippy]
