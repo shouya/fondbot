@@ -5,7 +5,8 @@ authors = ["Shou Ya <github@lain.li>"]
 
 
 [dependencies]
-telegram-bot = { git = "https://github.com/shouya/telegram-bot-rust", rev = "8b038c7e5" }
+# telegram-bot = { git = "https://github.com/shouya/telegram-bot-rust", rev = "8b038c7e5" }
+telegram-bot = { path = "../telegram-bot-rust/lib" }
 serde = "*"
 chrono = { version = "0.4", features = ["serde"] }
 serde_derive = "*"

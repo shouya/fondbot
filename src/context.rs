@@ -37,23 +37,41 @@ impl Context {
     self.exts.borrow_mut().push(Box::new(plugin));
   }
 
-  pub fn serve<'a>(&'a mut self) -> impl Future<Item = (), Error = ()> + 'a {
-    self
-      .bot
-      .stream()
-      .for_each(move |update| {
-        match update.kind {
-          tg::UpdateKind::Message(message) => {
-            self.process_message(&message);
-          }
-          tg::UpdateKind::CallbackQuery(query) => {
-            self.process_callback(&query);
-          }
-          _ => {}
-        };
-        Ok(())
-      })
-      .map_err(|_| ())
+  pub fn serve_poll<'a>(
+    &'a mut self,
+  ) -> Box<Future<Item = (), Error = ()> + 'a> {
+    Box::new(
+      self
+        .bot
+        .stream()
+        .for_each(move |update| {
+          self.process_update(update);
+          ok(())
+        })
+        .map_err(|_| ()),
+    )
+  }
+
+  pub fn serve_webhook<'a>(
+    &'a mut self,
+    callback_url: &str,
+    bind: &str,
+  ) -> Box<Future<Item = (), Error = ()> + 'a> {
+    let mut webhook = self.bot.webhook();
+    webhook.register(callback_url);
+    webhook.serve_at(
+      bind
+        .parse()
+        .expect(&format!("invalid bind format {}", bind)),
+    );
+    Box::new(
+      webhook
+        .for_each(move |update| {
+          self.process_update(update);
+          ok(())
+        })
+        .map_err(|_| ()),
+    )
   }
 
   pub fn process_callback(&mut self, query: &tg::CallbackQuery) {
@@ -89,6 +107,18 @@ impl Context {
 
     info!(self.logger, "Got message {:?}", message);
     self.exts_process_message(message);
+  }
+
+  pub fn process_update(&mut self, update: tg::Update) {
+    match update.kind {
+      tg::UpdateKind::Message(message) => {
+        self.process_message(&message);
+      }
+      tg::UpdateKind::CallbackQuery(query) => {
+        self.process_callback(&query);
+      }
+      _ => {}
+    }
   }
 
   fn exts_process_message(&self, msg: &tg::Message) {

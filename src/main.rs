@@ -52,6 +52,8 @@ use context::Context;
 
 const DEBUG: bool = false;
 
+const TELEGRAM_DEFAULT_BIND: &'static str = "127.0.0.1:6407";
+
 fn main() {
   let mut core = reactor::Core::new().unwrap();
 
@@ -101,13 +103,29 @@ fn main() {
   ctx.plug_ext::<reminder::ReminderPool>();
   ctx.plug_ext::<music::Music>();
 
-  let serve = futures::lazy(|| {
-    info!(logger, "Started serving");
-    ok(())
-  }).and_then(|_| ctx.serve());
+  let serve = {
+    let webhook_callback = env::var("TELEGRAM_WEBHOOK_CALLBACK");
+    let bind =
+      env::var("TELEGRAM_WEBHOOK_BIND").unwrap_or(TELEGRAM_DEFAULT_BIND.into());
 
-  // let future = consume_updates.then(|_| serve);
-  let future = serve;
+    if let Ok(callback_url) = webhook_callback {
+      info!(
+        logger,
+        "Started serving with webhook at {}, bind on {}", callback_url, bind
+      );
+      ctx.serve_webhook(&callback_url, &bind)
+    } else {
+      info!(logger, "Started serving with long polling");
+      ctx.serve_poll()
+    }
+  };
+
+  let future = {
+    match env::var("CONSUME_UPDATES") {
+      Ok(ref x) if x == "1" => Box::new(consume_updates.then(|_| serve)),
+      _ => serve,
+    }
+  };
 
   core.run(future).ok();
 }
