@@ -40,16 +40,16 @@ impl Context {
   pub fn serve_poll<'a>(
     &'a mut self,
   ) -> Box<Future<Item = (), Error = ()> + 'a> {
-    Box::new(
-      self
-        .bot
-        .stream()
+    let req = self.bot.send(tg::DeleteWebhook).map_err(|_| ());
+    let fut = req.then(|_| {
+      self.bot.stream()
         .for_each(move |update| {
           self.process_update(update);
           ok(())
         })
-        .map_err(|_| ()),
-    )
+        .map_err(|_| ())
+    });
+    Box::new(fut)
   }
 
   pub fn serve_webhook<'a>(

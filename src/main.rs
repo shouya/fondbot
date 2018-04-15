@@ -1,11 +1,10 @@
 // #![feature(custom_attribute)]
 #![feature(iterator_for_each)]
-#![feature(conservative_impl_trait)]
 #![feature(box_patterns)]
 #![feature(associated_type_defaults)]
 #![feature(box_syntax)]
 #![feature(option_filter)]
-#![feature(proc_macro, conservative_impl_trait, generators)]
+#![feature(proc_macro, generators)]
 
 #[macro_use]
 pub extern crate diesel;
@@ -127,7 +126,7 @@ fn main() {
     }
   };
 
-  core.run(future).ok();
+  core.run(future).unwrap();
 }
 
 #[allow(dead_code)]

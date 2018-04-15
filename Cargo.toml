@@ -40,7 +40,7 @@ lint = ["clippy"]
 
 [dependencies.telegram-bot]
 git = "https://github.com/shouya/telegram-bot-rust"
-rev = "f8bac1713"
+rev = "f7e988c95"
 
 # path = "../telegram-bot-rust/lib"
 
