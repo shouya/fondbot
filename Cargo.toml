@@ -22,7 +22,7 @@ slog-scope = "4.0.1"
 slog-async = "2.2.0"
 slog-term = "2.3.0"
 diesel = { version = "0.15.0", features = ["sqlite", "chrono"] }
-diesel_codegen = { version = "0.15.0", features = ["sqlite"] }
+diesel_codegen = { version = "0.16.0", features = ["sqlite"] }
 tokio-core = "*"
 tokio-timer = "*"
 futures = "*"
