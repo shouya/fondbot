@@ -218,13 +218,13 @@ fn aqi_level(aqi: i32) -> &'static str {
 
 fn lo_hi_curr<T>(
   vec: &Vec<_CaiyunResultValue<T>>,
-) -> Result<(T, T, T), Box<Error>>
+) -> Result<(T, T, T)>
 where
   _CaiyunResultValue<T>: Ord,
   T: Copy,
 {
   if vec.is_empty() {
-    return Err("lo_hi_curr got empty vector".into());
+    return ErrorKind::Unknown("lo_hi_curr got empty vector".into());
   }
 
   let curr = vec.first().unwrap().value;

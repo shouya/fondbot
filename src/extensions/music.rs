@@ -121,14 +121,14 @@ impl Music {
           .chat
           .chat_action(tg::ChatAction::RecordAudio),
       )
-      .map_err(|_| ());
+      .from_err();
     let upload_action = bot
       .send(
         msg
           .chat
           .chat_action(tg::ChatAction::UploadAudio),
       )
-      .map_err(|_| ());
+      .from_err();
 
     let download_fut = download_action
       .join3(detail_fut, file_fut)
@@ -142,25 +142,7 @@ impl Music {
         if detail.performer.is_some() {
           req.performer(detail.performer.unwrap());
         }
-        // req.reply_markup(vec![vec![]])
-        // let mut options: HashMap<&'static str, String> = HashMap::new();
-        // options.insert("chat_id", format!("{}", msg.chat.id()));
-        // options.insert("title", detail.title);
-        // options.insert("reply_to_message_id", format!("{}", msg.id));
-        // if detail.performer.is_some() {
-        //   options.insert("performer", detail.performer.unwrap());
-        // }
-
-        // // currently unable to get token out of bot yet.
-        // let token = env::var("TELEGRAM_BOT_TOKEN")
-        //   .expect("TELEGRAM_BOT_TOKEN env var not defined");
-
-        // Self::send_audio(token, audio_data, options);
-        println!("4");
-        bot.send(req).map_err(|_| {
-          println!("5");
-          ()
-        })
+        bot.send(req).from_err()
       },
     );
 
@@ -168,7 +150,7 @@ impl Music {
   }
 
   #[async]
-  fn download(id: u64) -> Result<Vec<u8>, ()> {
+  fn download(id: u64) -> Result<Vec<u8>> {
     use curl::easy::List;
     let mut curl = Easy::new();
     let mut buf = Vec::new();

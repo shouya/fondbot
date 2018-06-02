@@ -39,15 +39,15 @@ impl Context {
 
   pub fn serve_poll<'a>(
     &'a mut self,
-  ) -> Box<Future<Item = (), Error = ()> + 'a> {
-    let req = self.bot.send(tg::DeleteWebhook).map_err(|_| ());
+  ) -> Box<Future<Item = (), Error = Error> + 'a> {
+    let req = self.bot.send(tg::DeleteWebhook);
     let fut = req.then(|_| {
       self.bot.stream()
         .for_each(move |update| {
           self.process_update(update);
           ok(())
         })
-        .map_err(|_| ())
+        .from_err()
     });
     Box::new(fut)
   }
@@ -56,7 +56,7 @@ impl Context {
     &'a mut self,
     callback_url: &str,
     bind: &str,
-  ) -> Box<Future<Item = (), Error = ()> + 'a> {
+  ) -> Box<Future<Item = (), Error = Error> + 'a> {
     let mut webhook = self.bot.webhook();
     webhook.register(callback_url);
     webhook.serve_at(
@@ -70,7 +70,7 @@ impl Context {
           self.process_update(update);
           ok(())
         })
-        .map_err(|_| ()),
+        .map_err(|_| "".into())
     )
   }
 

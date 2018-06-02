@@ -16,6 +16,9 @@ extern crate lazy_static;
 pub extern crate serde_derive;
 #[macro_use]
 pub extern crate slog;
+#[macro_use]
+pub extern crate error_chain;
+
 
 extern crate dotenv;
 extern crate slog_async;
@@ -34,7 +37,6 @@ pub extern crate tokio_core;
 pub extern crate curl;
 pub extern crate hyper;
 pub extern crate hyper_tls;
-
 pub extern crate url;
 
 mod common;
@@ -45,6 +47,7 @@ mod context_extensions;
 mod extensions;
 mod util;
 mod services;
+mod errors;
 
 use common::*;
 use context::Context;

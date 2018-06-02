@@ -1,6 +1,5 @@
 pub use std::env;
 pub use std::cell::{Cell, RefCell};
-pub use std::error::Error;
 pub use std::collections::{HashMap, HashSet};
 pub use std::fmt::{Debug, Display};
 pub use std::fmt::Write;
@@ -44,6 +43,8 @@ pub use util::{ellipsis, escape_markdown, format_duration, format_human_time,
 
 pub use chrono;
 pub use chrono::{Date, DateTime, Duration, Local, TimeZone};
+
+pub use ::errors::{Error, ErrorKind, Result};
 
 // lazy_static! {
 //   pub static ref GLOBAL_TIMEZONE: chrono::FixedOffset = chrono::FixedOffset::east(28800);
