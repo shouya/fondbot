@@ -10,7 +10,7 @@ pub trait WeatherProvider: Display {
     city: &str,
     extra: Option<&str>,
     handle: &reactor::Handle,
-  ) -> Box<Future<Item = Self, Error = Box<Error>>>
+  ) -> Box<Future<Item = Self, Error = Error>>
   where
     Self: Sized;
 }
@@ -142,17 +142,17 @@ impl WeatherProvider for Caiyun {
     _: &str,
     long_lat: Option<&str>,
     handle: &reactor::Handle,
-  ) -> Box<Future<Item = Self, Error = Box<Error>>> {
+  ) -> Box<Future<Item = Self, Error = Error>> {
+    use futures::Future;
     let long_lat = long_lat.unwrap();
     let api_key = env::var("CAIYUN_API_KEY").unwrap();
     let url =
       format!("{}/{}/{}/forecast.json", CAIYUN_API_BASE, api_key, long_lat);
 
-    let future = request(handle, &url).map(|mut weather_data: Self| {
+    box request(handle, &url).map(|mut weather_data: Self| {
       weather_data.truncate_result();
       weather_data
-    });
-    Box::new(future)
+    })
   }
 }
 
@@ -216,15 +216,13 @@ fn aqi_level(aqi: i32) -> &'static str {
   }
 }
 
-fn lo_hi_curr<T>(
-  vec: &Vec<_CaiyunResultValue<T>>,
-) -> Result<(T, T, T)>
+fn lo_hi_curr<T>(vec: &Vec<_CaiyunResultValue<T>>) -> Result<(T, T, T)>
 where
   _CaiyunResultValue<T>: Ord,
   T: Copy,
 {
   if vec.is_empty() {
-    return ErrorKind::Unknown("lo_hi_curr got empty vector".into());
+    return Err(ErrorKind::Unknown("lo_hi_curr got empty vector".into()).into());
   }
 
   let curr = vec.first().unwrap().value;
