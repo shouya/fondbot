@@ -3,7 +3,6 @@ use common::*;
 use serde::de::DeserializeOwned;
 use serde_json::de;
 
-use hyper::Error as HyperError;
 use hyper::{header, Client, Method, Request, Uri};
 use hyper_tls::HttpsConnector;
 
@@ -13,15 +12,20 @@ const USER_AGENT: &'static str = "Mozilla/5.0 (Macintosh; Intel Mac OS X \
                                   10_12_1) AppleWebKit/537.36 (KHTML, like \
                                   Gecko) Chrome/54.0.2840.98 Safari/537.36";
 
-error_chain! {
-  foreign_links {
-    Hyper(HyperError);
-  }
+pub mod err {
+  use hyper;
 
-  errors {
-    RequestError(uri: Uri) {
-        description("request error")
-        display("{} responded with a non-200 code", uri)
+  error_chain! {
+    foreign_links {
+      Hyper(hyper::Error);
+      Json(::serde_json::Error);
+    }
+
+    errors {
+      RequestError(uri: hyper::Uri) {
+          description("request error")
+          display("{} responded with a non-200 code", uri)
+      }
     }
   }
 }
@@ -29,7 +33,7 @@ error_chain! {
 pub fn request<T: DeserializeOwned + 'static>(
   handle: &reactor::Handle,
   uri: &str,
-) -> impl Future<Item = T, Error = Error> {
+) -> impl Future<Item = T, Error = err::Error> {
   let uri = Uri::from_str(uri).unwrap();
   let mut req = Request::new(Method::Get, uri.clone());
   req.headers_mut().set(header::UserAgent::new(USER_AGENT));
@@ -47,7 +51,8 @@ pub fn request<T: DeserializeOwned + 'static>(
   request
     .and_then(move |response| {
       if !response.status().is_success() {
-        err(ErrorKind::RequestError(uri).into())
+        let e: err::Error = err::ErrorKind::RequestError(uri).into();
+        err(e.into())
       } else {
         ok(response)
       }
@@ -57,6 +62,5 @@ pub fn request<T: DeserializeOwned + 'static>(
       let v = chunk.to_vec();
       String::from_utf8_lossy(&v).to_string()
     })
-    .and_then(|text| de::from_str(text.as_str()).map_err(From::from))
-    .from_err()
+    .and_then(|text| de::from_str(text.as_str()).map_err(|x| x.into()))
 }

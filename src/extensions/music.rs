@@ -18,13 +18,20 @@ struct AudioDetail {
   album: Option<String>,
 }
 
+pub mod err {
+  error_chain! {
+    errors {
+      InvalidSongDetail(id: u64)
+    }
+  }
+}
+
 fn parse_song_id(url: &str) -> Option<u64> {
   lazy_static! {
     static ref RE: Regex =
       Regex::new(r"http(s?)://music\.163\.com/.*?/song\?id=(\d+)").unwrap();
   }
-  RE.captures(url)
-    .and_then(|cap| cap[2].parse::<u64>().ok())
+  RE.captures(url).and_then(|cap| cap[2].parse::<u64>().ok())
 }
 
 impl AudioDetail {
@@ -35,29 +42,25 @@ impl AudioDetail {
   fn from_id(
     id: u64,
     handle: &reactor::Handle,
-  ) -> Box<Future<Item = Self, Error = ()>> {
-    let api_url = format!(
-      "https://music.163.com/api/song/detail/?ids=[{}]",
-      id
-    );
-    let song = request(handle, &api_url)
-      .map_err(|_| ())
-      .and_then(move |value: Value| {
+  ) -> impl Future<Item = Self, Error = Error> {
+    let api_url =
+      format!("https://music.163.com/api/song/detail/?ids=[{}]", id);
+    let song = request(handle, &api_url).from_err().and_then(
+      move |value: Value| {
         let song = &value["songs"][0];
         if song.is_object() {
           ok(song.clone())
         } else {
-          err(())
+          let e: err::Error = err::ErrorKind::InvalidSongDetail(id).into();
+          err(e.into())
         }
-      });
-    let object = song.and_then(move |song: Value| {
+      },
+    );
+
+    song.and_then(move |song: Value| {
       let title = song["name"].as_str().unwrap().into();
-      let performer = song["artists"][0]["name"]
-        .as_str()
-        .map(|x| x.into());
-      let album = song["album"][0]["name"]
-        .as_str()
-        .map(|x| x.into());
+      let performer = song["artists"][0]["name"].as_str().map(|x| x.into());
+      let album = song["album"][0]["name"].as_str().map(|x| x.into());
 
       ok(Self {
         id,
@@ -65,8 +68,7 @@ impl AudioDetail {
         performer,
         album,
       })
-    });
-    box object
+    })
   }
 }
 
@@ -75,9 +77,10 @@ impl BotExtension for Music {
   where
     Self: Sized,
   {
-    ctx.db.load_conf("music").unwrap_or(Music {
-      auto_parse: true,
-    })
+    ctx
+      .db
+      .load_conf("music")
+      .unwrap_or(Music { auto_parse: true })
   }
 
   fn process(&mut self, msg: &tg::Message, ctx: &Context) {
@@ -116,18 +119,10 @@ impl Music {
     let msg = msg.clone();
 
     let download_action = bot
-      .send(
-        msg
-          .chat
-          .chat_action(tg::ChatAction::RecordAudio),
-      )
+      .send(msg.chat.chat_action(tg::ChatAction::RecordAudio))
       .from_err();
     let upload_action = bot
-      .send(
-        msg
-          .chat
-          .chat_action(tg::ChatAction::UploadAudio),
-      )
+      .send(msg.chat.chat_action(tg::ChatAction::UploadAudio))
       .from_err();
 
     let download_fut = download_action
@@ -144,7 +139,7 @@ impl Music {
         }
         bot.send(req).from_err()
       },
-    );
+    ).map_err(|_| ());
 
     ctx.handle.spawn(upload_fut);
   }
@@ -156,15 +151,11 @@ impl Music {
     let mut buf = Vec::new();
     let mut headers = List::new();
 
-    let url = format!(
-      "http://music.163.com/song/media/outer/url?id={}.mp3",
-      id
-    );
+    let url =
+      format!("http://music.163.com/song/media/outer/url?id={}.mp3", id);
     curl.url(&url).unwrap();
 
-    headers
-      .append("X-Real-IP: 36.110.107.162")
-      .unwrap();
+    headers.append("X-Real-IP: 221.192.199.49").unwrap();
 
     curl.http_headers(headers).unwrap();
     curl.follow_location(true).unwrap();
@@ -203,10 +194,7 @@ impl Music {
       part.add().unwrap();
     }
 
-    let url = format!(
-      "https://api.telegram.org/bot{}/sendAudio",
-      bot_token
-    );
+    let url = format!("https://api.telegram.org/bot{}/sendAudio", bot_token);
     curl.url(&url).unwrap();
     curl.httppost(form).unwrap();
     curl.perform().expect("Failed sending audio");

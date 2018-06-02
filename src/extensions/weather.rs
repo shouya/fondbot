@@ -149,7 +149,7 @@ impl WeatherProvider for Caiyun {
     let url =
       format!("{}/{}/{}/forecast.json", CAIYUN_API_BASE, api_key, long_lat);
 
-    box request(handle, &url).map(|mut weather_data: Self| {
+    box request(handle, &url).from_err().map(|mut weather_data: Self| {
       weather_data.truncate_result();
       weather_data
     })

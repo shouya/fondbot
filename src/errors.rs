@@ -1,13 +1,14 @@
 use services::request;
+use extensions as ext;
 
 error_chain! {
     foreign_links {
         Telegram(::telegram_bot::Error);
-        Json(::serde_json::Error);
     }
 
     links {
-        Request(request::Error, request::ErrorKind);
+        Request(request::err::Error, request::err::ErrorKind);
+        Music(ext::music::err::Error, ext::music::err::ErrorKind);
     }
 
     errors {
