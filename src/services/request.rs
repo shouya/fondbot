@@ -3,6 +3,7 @@ use common::*;
 use serde::de::DeserializeOwned;
 use serde_json::de;
 
+use hyper::Error as HyperError;
 use hyper::{header, Client, Method, Request, Uri};
 use hyper_tls::HttpsConnector;
 
@@ -11,6 +12,19 @@ use std::str::FromStr;
 const USER_AGENT: &'static str = "Mozilla/5.0 (Macintosh; Intel Mac OS X \
                                   10_12_1) AppleWebKit/537.36 (KHTML, like \
                                   Gecko) Chrome/54.0.2840.98 Safari/537.36";
+
+error_chain! {
+  foreign_links {
+    Hyper(HyperError);
+  }
+
+  errors {
+    RequestError(uri: Uri) {
+        description("request error")
+        display("{} responded with a non-200 code", uri)
+    }
+  }
+}
 
 pub fn request<T: DeserializeOwned + 'static>(
   handle: &reactor::Handle,
