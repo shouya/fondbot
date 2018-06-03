@@ -42,7 +42,9 @@ impl Context {
   ) -> Box<Future<Item = (), Error = Error> + 'a> {
     let req = self.bot.send(tg::DeleteWebhook);
     let fut = req.then(|_| {
-      self.bot.stream()
+      self
+        .bot
+        .stream()
         .for_each(move |update| {
           self.process_update(update);
           ok(())
@@ -70,7 +72,7 @@ impl Context {
           self.process_update(update);
           ok(())
         })
-        .map_err(|_| "".into())
+        .map_err(|_| "".into()),
     )
   }
 
