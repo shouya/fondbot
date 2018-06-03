@@ -10,7 +10,7 @@ pub trait WeatherProvider: Display {
     city: &str,
     extra: Option<&str>,
     handle: &reactor::Handle,
-  ) -> Box<Future<Item = Self, Error = Error>>
+  ) -> Box<Future<Item = Self, Error = FondbotError>>
   where
     Self: Sized;
 }
@@ -142,17 +142,19 @@ impl WeatherProvider for Caiyun {
     _: &str,
     long_lat: Option<&str>,
     handle: &reactor::Handle,
-  ) -> Box<Future<Item = Self, Error = Error>> {
+  ) -> Box<Future<Item = Self, Error = FondbotError>> {
     use futures::Future;
     let long_lat = long_lat.unwrap();
     let api_key = env::var("CAIYUN_API_KEY").unwrap();
     let url =
       format!("{}/{}/{}/forecast.json", CAIYUN_API_BASE, api_key, long_lat);
 
-    box request(handle, &url).from_err().map(|mut weather_data: Self| {
-      weather_data.truncate_result();
-      weather_data
-    })
+    box request(handle, &url)
+      .from_err()
+      .map(|mut weather_data: Self| {
+        weather_data.truncate_result();
+        weather_data
+      })
   }
 }
 
@@ -222,7 +224,7 @@ where
   T: Copy,
 {
   if vec.is_empty() {
-    return Err(ErrorKind::Unknown("lo_hi_curr got empty vector".into()).into());
+    return Err(FondbotError::Message("lo_hi_curr got empty vector".into()));
   }
 
   let curr = vec.first().unwrap().value;

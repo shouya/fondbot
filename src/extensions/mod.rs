@@ -3,8 +3,8 @@ pub mod afk;
 pub mod weather;
 // pub mod manager;
 pub mod history;
-pub mod reminder;
 pub mod music;
+pub mod reminder;
 
 use common::*;
 
@@ -46,4 +46,10 @@ pub trait InteractiveBuilder {
   fn ready(&self) -> bool {
     self.build().is_some()
   }
+}
+
+#[derive(Fail, Debug)]
+pub enum ExtensionError {
+  #[fail(display = "Error in `music`: {}", _0)]
+  Music(#[cause] music::MusicError),
 }

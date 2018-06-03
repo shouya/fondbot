@@ -1,8 +1,10 @@
 use common::*;
 
 use serde::de::DeserializeOwned;
+use serde_json;
 use serde_json::de;
 
+use hyper;
 use hyper::{header, Client, Method, Request, Uri};
 use hyper_tls::HttpsConnector;
 
@@ -12,28 +14,26 @@ const USER_AGENT: &'static str = "Mozilla/5.0 (Macintosh; Intel Mac OS X \
                                   10_12_1) AppleWebKit/537.36 (KHTML, like \
                                   Gecko) Chrome/54.0.2840.98 Safari/537.36";
 
-pub mod err {
-  use hyper;
+#[derive(Fail, Debug)]
+pub enum RequestError {
+  #[fail(display = "Hyper error: {}", _0)]
+  Hyper(hyper::Error),
+  #[fail(display = "Failed decoding json: {}", _0)]
+  Json(serde_json::Error),
+  #[fail(display = "Failed requesting resource: {}", _0)]
+  Failed(hyper::Uri),
+}
 
-  error_chain! {
-    foreign_links {
-      Hyper(hyper::Error);
-      Json(::serde_json::Error);
-    }
-
-    errors {
-      RequestError(uri: hyper::Uri) {
-          description("request error")
-          display("{} responded with a non-200 code", uri)
-      }
-    }
+impl From<hyper::Error> for RequestError {
+  fn from(e: hyper::Error) -> RequestError {
+    RequestError::Hyper(e)
   }
 }
 
 pub fn request<T: DeserializeOwned + 'static>(
   handle: &reactor::Handle,
   uri: &str,
-) -> impl Future<Item = T, Error = err::Error> {
+) -> impl Future<Item = T, Error = RequestError> {
   let uri = Uri::from_str(uri).unwrap();
   let mut req = Request::new(Method::Get, uri.clone());
   req.headers_mut().set(header::UserAgent::new(USER_AGENT));
@@ -51,8 +51,7 @@ pub fn request<T: DeserializeOwned + 'static>(
   request
     .and_then(move |response| {
       if !response.status().is_success() {
-        let e: err::Error = err::ErrorKind::RequestError(uri).into();
-        err(e.into())
+        err(RequestError::Failed(uri))
       } else {
         ok(response)
       }
@@ -62,5 +61,7 @@ pub fn request<T: DeserializeOwned + 'static>(
       let v = chunk.to_vec();
       String::from_utf8_lossy(&v).to_string()
     })
-    .and_then(|text| de::from_str(text.as_str()).map_err(|x| x.into()))
+    .and_then(|text| {
+      de::from_str(text.as_str()).map_err(|e| RequestError::Json(e))
+    })
 }

@@ -5,7 +5,7 @@ pub trait TgApiExt {
   // This method blocks the main thread
   fn consume_updates<'a>(
     &'a self,
-  ) -> Box<Future<Item = Vec<tg::Update>, Error = Error> + 'a>;
+  ) -> Box<Future<Item = Vec<tg::Update>, Error = tg::Error> + 'a>;
 
   fn reply_to<'s, R, T>(&self, to: R, text: T)
   where
@@ -20,7 +20,7 @@ pub trait TgApiExt {
 impl TgApiExt for tg::Api {
   fn consume_updates<'a>(
     &'a self,
-  ) -> Box<Future<Item = Vec<tg::Update>, Error = Error> + 'a> {
+  ) -> Box<Future<Item = Vec<tg::Update>, Error = tg::Error> + 'a> {
     use futures::future::{loop_fn, Loop};
     let init_state: (tg::Integer, Vec<tg::Update>) = (0, Vec::new());
 
@@ -36,7 +36,7 @@ impl TgApiExt for tg::Api {
           Ok(Loop::Continue((new_last, new_consumed)))
         }
       })
-    }).from_err()
+    })
   }
 
   fn reply_to<'s, R, T>(&self, to: R, text: T)
@@ -111,7 +111,8 @@ impl TgMessageExt for tg::Message {
 
   fn cmd_arg(&self) -> Option<String> {
     lazy_static! {
-      static ref RE: Regex = Regex::new(r"^/(?P<cmd>\w+)(@\w+bot)?\s+?(?P<arg>.*)$").unwrap();
+      static ref RE: Regex =
+        Regex::new(r"^/(?P<cmd>\w+)(@\w+bot)?\s+?(?P<arg>.*)$").unwrap();
     }
     if let tg::MessageKind::Text { ref data, .. } = self.kind {
       RE.captures(data)

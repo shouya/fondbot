@@ -18,12 +18,13 @@ struct AudioDetail {
   album: Option<String>,
 }
 
-pub mod err {
-  error_chain! {
-    errors {
-      InvalidSongDetail(id: u64)
-    }
-  }
+#[derive(Fail, Debug)]
+pub enum MusicError {
+  #[fail(display = "Failed requesting info: {}", _0)]
+  Request(RequestError),
+
+  #[fail(display = "Invalid song detail for id={}", id)]
+  InvalidSongDetail { id: u64 },
 }
 
 fn parse_song_id(url: &str) -> Option<u64> {
@@ -42,20 +43,19 @@ impl AudioDetail {
   fn from_id(
     id: u64,
     handle: &reactor::Handle,
-  ) -> impl Future<Item = Self, Error = Error> {
+  ) -> impl Future<Item = Self, Error = MusicError> {
     let api_url =
       format!("https://music.163.com/api/song/detail/?ids=[{}]", id);
-    let song = request(handle, &api_url).from_err().and_then(
-      move |value: Value| {
+    let song = request(handle, &api_url)
+      .map_err(|e| MusicError::Request(e))
+      .and_then(move |value: Value| {
         let song = &value["songs"][0];
         if song.is_object() {
           ok(song.clone())
         } else {
-          let e: err::Error = err::ErrorKind::InvalidSongDetail(id).into();
-          err(e.into())
+          err(MusicError::InvalidSongDetail { id })
         }
-      },
-    );
+      });
 
     song.and_then(move |song: Value| {
       let title = song["name"].as_str().unwrap().into();
@@ -113,7 +113,8 @@ impl Music {
 
     info!(ctx.logger, "Found music query: {}", id);
 
-    let detail_fut = AudioDetail::from_id(id, &ctx.handle);
+    let detail_fut = AudioDetail::from_id(id, &ctx.handle)
+      .map_err(|e| ExtensionError::Music(e).into());
     let file_fut = futures::lazy(move || Self::download(id));
     let bot = ctx.bot.clone();
     let msg = msg.clone();
@@ -129,8 +130,9 @@ impl Music {
       .join3(detail_fut, file_fut)
       .and_then(move |(_, detail, file)| ok((detail, file)));
 
-    let upload_fut = upload_action.join(download_fut).and_then(
-      move |(_, (detail, audio_data))| {
+    let upload_fut = upload_action
+      .join(download_fut)
+      .and_then(move |(_, (detail, audio_data))| {
         let mut req =
           msg.audio_file_content_reply(audio_data, Some("music.mp3"));
         req.title(detail.title);
@@ -138,8 +140,8 @@ impl Music {
           req.performer(detail.performer.unwrap());
         }
         bot.send(req).from_err()
-      },
-    ).map_err(|_| ());
+      })
+      .map_err(|_| ());
 
     ctx.handle.spawn(upload_fut);
   }

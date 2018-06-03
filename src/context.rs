@@ -39,9 +39,9 @@ impl Context {
 
   pub fn serve_poll<'a>(
     &'a mut self,
-  ) -> Box<Future<Item = (), Error = Error> + 'a> {
+  ) -> Box<Future<Item = (), Error = ()> + 'a> {
     let req = self.bot.send(tg::DeleteWebhook);
-    let fut = req.then(|_| {
+    box req.map_err(|_| ()).then(|_| {
       self
         .bot
         .stream()
@@ -49,16 +49,15 @@ impl Context {
           self.process_update(update);
           ok(())
         })
-        .from_err()
-    });
-    Box::new(fut)
+        .map_err(|_| ())
+    })
   }
 
   pub fn serve_webhook<'a>(
     &'a mut self,
     callback_url: &str,
     bind: &str,
-  ) -> Box<Future<Item = (), Error = Error> + 'a> {
+  ) -> Box<Future<Item = (), Error = ()> + 'a> {
     let mut webhook = self.bot.webhook();
     webhook.register(callback_url);
     webhook.serve_at(
@@ -66,14 +65,10 @@ impl Context {
         .parse()
         .expect(&format!("invalid bind format {}", bind)),
     );
-    Box::new(
-      webhook
-        .for_each(move |update| {
-          self.process_update(update);
-          ok(())
-        })
-        .map_err(|_| "".into()),
-    )
+    box webhook.for_each(move |update| {
+      self.process_update(update);
+      ok(())
+    })
   }
 
   pub fn process_callback(&mut self, query: &tg::CallbackQuery) {

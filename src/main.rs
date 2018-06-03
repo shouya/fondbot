@@ -16,9 +16,11 @@ extern crate lazy_static;
 pub extern crate serde_derive;
 #[macro_use]
 pub extern crate slog;
-#[macro_use]
-pub extern crate error_chain;
 
+#[macro_use]
+pub extern crate failure;
+#[macro_use]
+pub extern crate failure_derive;
 
 extern crate dotenv;
 extern crate slog_async;
@@ -39,15 +41,15 @@ pub extern crate hyper;
 pub extern crate hyper_tls;
 pub extern crate url;
 
+mod bot;
 mod common;
 mod context;
-mod bot;
-mod db;
 mod context_extensions;
-mod extensions;
-mod util;
-mod services;
+mod db;
 mod errors;
+mod extensions;
+mod services;
+mod util;
 
 use common::*;
 use context::Context;
@@ -70,9 +72,9 @@ fn main() {
 
   // make sure the logger lives long enough
   let logger = {
-    use slog_term::*;
-    use slog_async::*;
     use slog::*;
+    use slog_async::*;
+    use slog_term::*;
 
     let drain = term_full().fuse();
     let drain = Async::new(drain).build().fuse();
