@@ -36,6 +36,7 @@ fn parse_song_id(url: &str) -> Option<u64> {
 }
 
 impl AudioDetail {
+  #[allow(dead_code)]
   fn url(&self) -> String {
     format!("https://music.163.com/#/song?id={}", self.id)
   }
@@ -175,6 +176,7 @@ impl Music {
     Ok(buf)
   }
 
+  #[allow(dead_code)]
   fn send_audio<'a>(
     bot_token: String,
     audio: Vec<u8>,

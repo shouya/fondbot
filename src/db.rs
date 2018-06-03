@@ -99,15 +99,15 @@ impl Db {
   {
     let value_str = serde_json::to_string_pretty(&value).unwrap();
     self.execute_sql(&format!(
-      "INSERT INTO config (key,value) VALUES('{}', '{}')",
-      quote_str(&key),
-      quote_str(&value_str)
-    ))
-      || self.execute_sql(&format!(
-        "UPDATE config SET value = '{}' WHERE key = '{}'",
-        quote_str(&value_str),
-        quote_str(key)
-      ));
+      "INSERT OR REPLACE INTO config (id, key, value)
+      VALUES (
+          (SELECT id FROM config WHERE key = {key})
+          '{key}',
+          '{val}'
+      )",
+      key=quote_str(&key),
+      val=quote_str(&value_str)
+    ));
   }
 
   pub fn load_conf<T>(&self, key: &str) -> Option<T>
@@ -122,6 +122,7 @@ impl Db {
       .and_then(|val_str| serde_json::from_str(&val_str).ok())
   }
 
+  #[allow(dead_code)]
   pub fn list_conf(&self) -> Vec<(String, String)> {
     sql::<(Text, Text)>("SELECT key, value FROM config")
       .get_results(&self.conn)

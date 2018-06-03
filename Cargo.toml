@@ -24,11 +24,11 @@ slog = { version = "2.1.1", features = ["max_level_trace"] }
 slog-scope = "4.0.1"
 slog-async = "2.2.0"
 slog-term = "2.3.0"
-diesel = { version = "0.15.0", features = ["sqlite", "chrono"] }
+diesel = { version = "0.16.0", features = ["sqlite", "chrono"] }
 diesel_codegen = { version = "0.16.0", features = ["sqlite"] }
 tokio-core = "*"
 tokio-timer = "*"
-futures = "*"
+futures = "0.2.1"
 url = "1.7.0"
 curl = "*"
 futures-await = "0.1"

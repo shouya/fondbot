@@ -17,7 +17,6 @@ pub extern crate serde_derive;
 #[macro_use]
 pub extern crate slog;
 
-#[macro_use]
 pub extern crate failure;
 #[macro_use]
 pub extern crate failure_derive;
