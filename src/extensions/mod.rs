@@ -5,6 +5,7 @@ pub mod weather;
 pub mod history;
 pub mod music;
 pub mod reminder;
+pub mod yeelight;
 
 use common::*;
 

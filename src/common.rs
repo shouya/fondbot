@@ -13,9 +13,10 @@ pub use tg::ParseMode::{Html, Markdown};
 pub use tokio_core::reactor;
 
 pub use futures;
+pub use futures::future;
 pub use futures::future::{err, ok, FutureResult};
-pub use futures::Future;
-pub use futures::Stream;
+pub use futures::future::{Future, IntoFuture};
+pub use futures::stream::Stream;
 
 pub use serde::de::{Deserialize, DeserializeOwned};
 pub use serde::ser::Serialize;
@@ -47,7 +48,7 @@ pub use chrono;
 pub use chrono::{Date, DateTime, Duration, Local, TimeZone};
 
 pub use errors::{FondbotError, Result};
-pub use failure::SyncFailure;
+pub use failure::{Fail, SyncFailure};
 
 // lazy_static! {
 //   pub static ref GLOBAL_TIMEZONE: chrono::FixedOffset = chrono::FixedOffset::east(28800);

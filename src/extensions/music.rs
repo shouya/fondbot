@@ -115,8 +115,11 @@ impl Music {
     info!(ctx.logger, "Found music query: {}", id);
 
     let detail_fut = AudioDetail::from_id(id, &ctx.handle)
-      .map_err(|e| ExtensionError::Music(e).into());
-    let file_fut = futures::lazy(move || Self::download(id));
+      .map_err(ExtensionError::Music)
+      .map_err(FondbotError::Extension);
+    let file_fut = Self::download(id)
+      .map_err(ExtensionError::Music)
+      .map_err(FondbotError::Extension);
     let bot = ctx.bot.clone();
     let msg = msg.clone();
 
@@ -147,11 +150,9 @@ impl Music {
     ctx.handle.spawn(upload_fut);
   }
 
-  #[async]
-  fn download(id: u64) -> Result<Vec<u8>> {
+  fn download(id: u64) -> impl Future<Item = Vec<u8>, Error=MusicError> {
     use curl::easy::List;
     let mut curl = Easy::new();
-    let mut buf = Vec::new();
     let mut headers = List::new();
 
     let url =
@@ -163,7 +164,8 @@ impl Music {
     curl.http_headers(headers).unwrap();
     curl.follow_location(true).unwrap();
     // FnMut(&[u8]) -> Result<usize, WriteError> + Send + 'static
-    {
+    future::lazy(move || {
+      let mut buf = Vec::new();
       let mut transfer = curl.transfer();
       transfer
         .write_function(|data| {
@@ -172,8 +174,8 @@ impl Music {
         })
         .unwrap();
       transfer.perform().unwrap();
-    }
-    Ok(buf)
+      ok(buf)
+    })
   }
 
   #[allow(dead_code)]

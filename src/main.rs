@@ -26,9 +26,7 @@ extern crate slog_async;
 extern crate slog_term;
 
 pub extern crate chrono;
-
-pub extern crate futures_await as futures;
-// pub extern crate futures;
+pub extern crate futures;
 pub extern crate regex;
 pub extern crate serde;
 pub extern crate serde_json;

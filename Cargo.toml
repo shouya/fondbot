@@ -15,7 +15,6 @@ dotenv = "*"
 env_logger = "*"
 hyper = "0.11"
 hyper-tls = "0.1.2"
-# error-chain = "0.11.0"
 failure = "*"
 failure_derive = "*"
 regex = "*"
@@ -28,10 +27,10 @@ diesel = { version = "0.16.0", features = ["sqlite", "chrono"] }
 diesel_codegen = { version = "0.16.0", features = ["sqlite"] }
 tokio-core = "*"
 tokio-timer = "*"
-futures = "0.2.1"
+# can't use futures 2
+futures = "0.1.21"
 url = "1.7.0"
 curl = "*"
-futures-await = "0.1"
 
 
 [dependencies.clippy]

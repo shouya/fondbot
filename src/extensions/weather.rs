@@ -143,7 +143,6 @@ impl WeatherProvider for Caiyun {
     long_lat: Option<&str>,
     handle: &reactor::Handle,
   ) -> Box<Future<Item = Self, Error = FondbotError>> {
-    use futures::Future;
     let long_lat = long_lat.unwrap();
     let api_key = env::var("CAIYUN_API_KEY").unwrap();
     let url =
