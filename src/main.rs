@@ -29,6 +29,7 @@ pub extern crate chrono;
 pub extern crate futures;
 pub extern crate regex;
 pub extern crate serde;
+#[macro_use]
 pub extern crate serde_json;
 pub extern crate telegram_bot;
 pub extern crate tokio_core;
@@ -89,7 +90,11 @@ fn main() {
   };
 
   let consume_updates = bot.consume_updates().and_then(|updates| {
-    info!(logger, "Consumed previous {} updates", updates.len());
+    info!(
+      logger,
+      "Consumed previous {} updates",
+      updates.len()
+    );
     ok(())
   });
 
