@@ -5,6 +5,7 @@
 #![feature(box_syntax)]
 #![feature(option_filter)]
 #![feature(proc_macro, generators)]
+#![feature(slice_patterns)]
 
 #[macro_use]
 pub extern crate diesel;
