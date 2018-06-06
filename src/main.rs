@@ -53,7 +53,7 @@ mod util;
 use common::*;
 use context::Context;
 
-const DEBUG: bool = false;
+const DEBUG: bool = true;
 
 const TELEGRAM_DEFAULT_BIND: &'static str = "127.0.0.1:6407";
 
@@ -139,5 +139,12 @@ fn main() {
 
 #[allow(dead_code)]
 fn debug() {
-  println!("got: {:?}", 1);
+  let yee = extensions::yeelight::Yeelight {
+    addr: Some("10.144.233.101:55443".parse().unwrap()),
+    ..Default::default()
+  };
+  let mut core = reactor::Core::new().unwrap();
+  let handle = core.handle();
+
+  println!("{:?}", core.run(yee.query_current_state(&handle)));
 }
