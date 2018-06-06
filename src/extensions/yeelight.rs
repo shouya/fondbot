@@ -24,7 +24,7 @@ type Request = Vec<Query>;
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct Yeelight {
   pub addr: Option<SocketAddr>,
-  pub modes: HashMap<String, Request>,
+  pub modes: Vec<(String, Request)>,
   pub current_state: Option<State>,
 }
 
@@ -154,25 +154,50 @@ impl Yeelight {
 
   fn switch_to_mode(&self, name: &str, ctx: &Context) {}
 
-  fn show_panel(&self, msg: &tg::Message, ctx: &Context) {}
+  fn show_panel(&self, msg: &tg::Message) -> tg::SendMessage {
+    let mut markup = tg::InlineKeyboardMarkup::new();
+    let functional_row = vec![
+      self.callback_button("Update state", "update"),
+      self.callback_button("Turn on", "on"),
+      self.callback_button("Turn off", "off"),
+    ];
+    markup.add_row(functional_row);
+    for row in self.render_modes() {
+      markup.add_row(row);
+    }
+
+    let mut req = msg.text_reply(self.report());
+    req.reply_markup(markup);
+    req
+  }
+
+  fn render_modes(&self) -> Vec<Vec<tg::InlineKeyboardButton>> {
+    let mut rows = Vec::new();
+    for chunk in self.modes.chunks(3) {
+      let mut row = Vec::new();
+      for (name, _) in chunk {
+        let key = format!("mode.{}", name);
+        row.push(self.callback_button(name, &key));
+      }
+      rows.push(row);
+    }
+    rows
+  }
 }
 
 impl BotExtension for Yeelight {
   fn init(ctx: &Context) -> Self {
     let mut core = reactor::Core::new().unwrap();
     let handle = core.handle();
-    let mut o: Yeelight = ctx
-      .db
-      .load_conf("yeelight")
-      .unwrap_or(Yeelight {
-        addr: Some(
-          env::var("YEELIGHT_ADDR")
-            .expect("yeelight address not specified.")
-            .parse()
-            .unwrap(),
-        ),
-        ..Default::default()
-      });
+    let mut o: Yeelight = ctx.db.load_conf("yeelight").unwrap_or(Yeelight {
+      addr: Some(
+        env::var("YEELIGHT_ADDR")
+          .expect("yeelight address not specified.")
+          .parse()
+          .unwrap(),
+      ),
+      ..Default::default()
+    });
 
     if let Ok(s) = core.run(o.query_current_state(&handle)) {
       o.current_state = Some(s);
@@ -192,8 +217,29 @@ impl BotExtension for Yeelight {
     ctx.db.save_conf("yeelight", &self);
   }
 
+  fn process_callback(&mut self, _query: &tg::CallbackQuery, _ctx: &Context) {
+  }
+
   fn report(&self) -> String {
-    "this is yeelight stuff!".to_string()
+    let state = self.current_state.as_ref();
+    if let None = state {
+      return "Unable to get current state.".into();
+    }
+    let state: &State = state.unwrap();
+
+    let power = match state.power {
+      Power::On => "on (💚)",
+      Power::Off => "off (�)",
+    };
+    format!(
+      "💡 [{name}] is currently powered {power}.\n \
+       - color: {color}\n \
+       - brightness: {brightness}\n",
+      name = &state.name,
+      power = &power,
+      color = &state.color,
+      brightness = &state.brightness
+    )
   }
   fn name(&self) -> &str {
     "yeelight"
