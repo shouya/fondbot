@@ -52,6 +52,9 @@ pub enum Error {
 
   #[fail(display = "Invalid response")]
   Response(String),
+
+  #[fail(display = "Cannot find mode {}", _0)]
+  Mode(String),
 }
 
 impl Yeelight {
@@ -92,6 +95,12 @@ impl Yeelight {
           color,
         })
       })
+  }
+
+  fn refresh_state(&mut self) {
+    let mut core = reactor::Core::new().unwrap();
+    let handle = core.handle();
+    self.current_state = core.run(self.query_current_state(&handle)).ok();
   }
 
   fn request(
@@ -152,7 +161,23 @@ impl Yeelight {
       })
   }
 
-  fn switch_to_mode(&self, name: &str, ctx: &Context) {}
+  fn switch_to_mode(
+    &self,
+    name: &str,
+    handle: &reactor::Handle
+  ) -> Box<Future<Item = (), Error = Error>> {
+    let req = self
+      .modes
+      .iter()
+      .find(|(mode_name, _)| name == mode_name)
+      .map(|(_, req)| req);
+
+    if req.is_none() {
+      return box err(Error::Mode(name.into()));
+    }
+
+    box self.request(req.unwrap().as_slice(), handle).map(|_| ())
+  }
 
   fn show_panel(&self, msg: &tg::Message) -> tg::SendMessage {
     let mut markup = tg::InlineKeyboardMarkup::new();
@@ -187,8 +212,6 @@ impl Yeelight {
 
 impl BotExtension for Yeelight {
   fn init(ctx: &Context) -> Self {
-    let mut core = reactor::Core::new().unwrap();
-    let handle = core.handle();
     let mut o: Yeelight = ctx.db.load_conf("yeelight").unwrap_or(Yeelight {
       addr: Some(
         env::var("YEELIGHT_ADDR")
@@ -198,11 +221,7 @@ impl BotExtension for Yeelight {
       ),
       ..Default::default()
     });
-
-    if let Ok(s) = core.run(o.query_current_state(&handle)) {
-      o.current_state = Some(s);
-    }
-
+    o.refresh_state();
     o
   }
 
@@ -217,7 +236,17 @@ impl BotExtension for Yeelight {
     ctx.db.save_conf("yeelight", &self);
   }
 
-  fn process_callback(&mut self, _query: &tg::CallbackQuery, _ctx: &Context) {
+  fn process_callback(&mut self, query: &tg::CallbackQuery, _ctx: &Context) {
+    if query.key().is_none() {
+      return;
+    }
+
+    match query.key().unwrap() {
+      "update" => {}
+      "on" => {}
+      "off" => {}
+      _ => {}
+    }
   }
 
   fn report(&self) -> String {
