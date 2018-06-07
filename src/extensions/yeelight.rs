@@ -1,5 +1,8 @@
 use common::*;
 
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use serde_json;
 use serde_json::Value as JsonValue;
 use std::net::SocketAddr;
@@ -11,7 +14,7 @@ enum Power {
   Off,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct State {
   name: String,
   brightness: i32,
@@ -25,7 +28,8 @@ type Request = Vec<Query>;
 pub struct Yeelight {
   pub addr: Option<SocketAddr>,
   pub modes: Vec<(String, Request)>,
-  pub current_state: Option<State>,
+  #[serde(skip_serializing, skip_deserializing)]
+  pub current_state: Arc<Mutex<Option<State>>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -97,10 +101,16 @@ impl Yeelight {
       })
   }
 
-  fn refresh_state(&mut self) {
-    let mut core = reactor::Core::new().unwrap();
-    let handle = core.handle();
-    self.current_state = core.run(self.query_current_state(&handle)).ok();
+  fn refresh_state(
+    &self,
+    handle: &reactor::Handle,
+  ) -> Box<Future<Item = (), Error = Error>> {
+    let state_ref = self.current_state.clone();
+
+    box self.query_current_state(&handle).and_then(move |new_state| {
+      *state_ref.lock().unwrap() = Some(new_state);
+      ok(())
+    })
   }
 
   fn request(
@@ -118,7 +128,7 @@ impl Yeelight {
       .ok_or(Error::NotReady)
       .into_future()
       .and_then(move |addr| {
-        TcpStream::connect(&addr, &handle).map_err(|_| Error::Network)
+        TcpStream::connect2(&addr).map_err(|_| Error::Network)
       })
       .map(|stream| (stream, Vec::new()));
 
@@ -164,7 +174,7 @@ impl Yeelight {
   fn switch_to_mode(
     &self,
     name: &str,
-    handle: &reactor::Handle
+    handle: &reactor::Handle,
   ) -> Box<Future<Item = (), Error = Error>> {
     let req = self
       .modes
@@ -177,6 +187,18 @@ impl Yeelight {
     }
 
     box self.request(req.unwrap().as_slice(), handle).map(|_| ())
+  }
+
+  fn switch_power(
+    &self,
+    power: Power,
+    handle: &reactor::Handle,
+  ) -> Box<Future<Item = (), Error = Error>> {
+    let req = vec![Query {
+      method: "set_power".into(),
+      params: json!([power.to_string(), "smooth", 500]),
+    }];
+    box self.request(&req, handle).map(|_| ())
   }
 
   fn show_panel(&self, msg: &tg::Message) -> tg::SendMessage {
@@ -208,6 +230,12 @@ impl Yeelight {
     }
     rows
   }
+
+  fn current_state(&self) -> Option<State> {
+    let rc = self.current_state.clone();
+    let locked = rc.lock().unwrap();
+    (*locked).clone()
+  }
 }
 
 impl BotExtension for Yeelight {
@@ -221,7 +249,8 @@ impl BotExtension for Yeelight {
       ),
       ..Default::default()
     });
-    o.refresh_state();
+    let refresh_fut = o.refresh_state(&ctx.handle.clone());
+    ctx.handle.spawn(refresh_fut.map_err(|_| ()));
     o
   }
 
@@ -236,29 +265,31 @@ impl BotExtension for Yeelight {
     ctx.db.save_conf("yeelight", &self);
   }
 
-  fn process_callback(&mut self, query: &tg::CallbackQuery, _ctx: &Context) {
+  fn process_callback(&mut self, query: &tg::CallbackQuery, ctx: &Context) {
     if query.key().is_none() {
       return;
     }
 
-    match query.key().unwrap() {
-      "update" => {}
-      "on" => {}
-      "off" => {}
-      _ => {}
-    }
+    let fut = match query.key().unwrap() {
+      "update" => self.refresh_state(&ctx.handle),
+      "on" => self.switch_power(Power::On, &ctx.handle),
+      "off" => self.switch_power(Power::Off, &ctx.handle),
+      k => self.switch_to_mode(k, &ctx.handle),
+    };
+
+    unimplemented!()
   }
 
   fn report(&self) -> String {
-    let state = self.current_state.as_ref();
+    let state = self.current_state();
     if let None = state {
       return "Unable to get current state.".into();
     }
-    let state: &State = state.unwrap();
+    let state: State = state.unwrap();
 
     let power = match state.power {
       Power::On => "on (💚)",
-      Power::Off => "off (�)",
+      Power::Off => "off",
     };
     format!(
       "💡 [{name}] is currently powered {power}.\n \
@@ -292,5 +323,14 @@ impl ToString for Query {
       "method": self.method,
       "params": self.params
     })).unwrap()
+  }
+}
+
+impl ToString for Power {
+  fn to_string(&self) -> String {
+    match self {
+      Power::On => "on".into(),
+      Power::Off => "off".into(),
+    }
   }
 }
