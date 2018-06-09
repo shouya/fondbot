@@ -53,7 +53,7 @@ mod util;
 use common::*;
 use context::Context;
 
-const DEBUG: bool = true;
+const DEBUG: bool = false;
 
 const TELEGRAM_DEFAULT_BIND: &'static str = "127.0.0.1:6407";
 
@@ -109,6 +109,7 @@ fn main() {
   ctx.plug_ext::<history::Searcher>();
   ctx.plug_ext::<reminder::ReminderPool>();
   ctx.plug_ext::<music::Music>();
+  ctx.plug_ext::<yeelight::Yeelight>();
 
   let serve = {
     let webhook_callback = env::var("TELEGRAM_WEBHOOK_CALLBACK");
@@ -144,7 +145,6 @@ fn debug() {
     ..Default::default()
   };
   let mut core = reactor::Core::new().unwrap();
-  let handle = core.handle();
 
-  println!("{:?}", core.run(yee.query_current_state(&handle)));
+  println!("{:?}", core.run(yee.query_current_state()));
 }

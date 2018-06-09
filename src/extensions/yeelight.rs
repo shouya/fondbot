@@ -1,5 +1,6 @@
 use common::*;
 
+use std;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -7,6 +8,8 @@ use serde_json;
 use serde_json::Value as JsonValue;
 use std::net::SocketAddr;
 use tokio_core::net::TcpStream;
+
+use tg::ToChatRef;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 enum Power {
@@ -20,6 +23,7 @@ pub struct State {
   brightness: i32,
   color: u32,
   power: Power,
+  updated_at: DateTime<Local>,
 }
 
 type Request = Vec<Query>;
@@ -59,21 +63,25 @@ pub enum Error {
 
   #[fail(display = "Cannot find mode {}", _0)]
   Mode(String),
+
+  #[fail(display = "Bot API error: {}", _0)]
+  Telegram(#[cause] SyncFailure<tg::Error>),
+
+  #[fail(display = "Invalid mode input")]
+  ModeInput,
 }
+
+type Result<T> = std::result::Result<T, Error>;
 
 impl Yeelight {
   pub fn query_current_state(
     &self,
-    handle: &reactor::Handle,
   ) -> impl Future<Item = State, Error = Error> {
     self
-      .request1(
-        &Query {
-          method: "get_prop".into(),
-          params: json!(["name", "bright", "rgb", "power"]),
-        },
-        handle,
-      )
+      .request1(&Query {
+        method: "get_prop".into(),
+        params: json!(["name", "bright", "rgb", "power"]),
+      })
       .and_then(|resp| {
         if resp.result.len() != 4 {
           return err(Error::Response(format!(
@@ -91,35 +99,32 @@ impl Yeelight {
           "on" => Power::On,
           _ => Power::Off,
         };
+        let updated_at = Local::now();
 
         ok(State {
           name,
           brightness,
           power,
           color,
+          updated_at,
         })
       })
   }
 
-  fn refresh_state(
-    &self,
-    handle: &reactor::Handle,
-  ) -> Box<Future<Item = (), Error = Error>> {
+  fn refresh_state(&self) -> Box<Future<Item = State, Error = Error>> {
     let state_ref = self.current_state.clone();
 
-    box self.query_current_state(&handle).and_then(move |new_state| {
-      *state_ref.lock().unwrap() = Some(new_state);
-      ok(())
+    box self.query_current_state().and_then(move |new_state| {
+      *state_ref.lock().unwrap() = Some(new_state.clone());
+      ok(new_state)
     })
   }
 
   fn request(
     &self,
     req: &[Query],
-    handle: &reactor::Handle,
   ) -> impl Future<Item = Vec<Response>, Error = Error> {
     use std::io::{Read, Write};
-    let handle = handle.clone();
 
     let mut conn: Box<
       Future<Item = (TcpStream, Vec<Response>), Error = Error>,
@@ -155,13 +160,9 @@ impl Yeelight {
     conn.map(|(_, carry)| carry)
   }
 
-  fn request1(
-    &self,
-    q: &Query,
-    handle: &reactor::Handle,
-  ) -> impl Future<Item = Response, Error = Error> {
+  fn request1(&self, q: &Query) -> impl Future<Item = Response, Error = Error> {
     self
-      .request(vec![q.clone()].as_slice(), handle)
+      .request(vec![q.clone()].as_slice())
       .and_then(|mut res| {
         if res.is_empty() {
           err(Error::Response("No response received".into()))
@@ -174,7 +175,6 @@ impl Yeelight {
   fn switch_to_mode(
     &self,
     name: &str,
-    handle: &reactor::Handle,
   ) -> Box<Future<Item = (), Error = Error>> {
     let req = self
       .modes
@@ -186,25 +186,34 @@ impl Yeelight {
       return box err(Error::Mode(name.into()));
     }
 
-    box self.request(req.unwrap().as_slice(), handle).map(|_| ())
+    box self.request(req.unwrap().as_slice()).map(|_| ())
   }
 
   fn switch_power(
     &self,
     power: Power,
-    handle: &reactor::Handle,
   ) -> Box<Future<Item = (), Error = Error>> {
     let req = vec![Query {
       method: "set_power".into(),
       params: json!([power.to_string(), "smooth", 500]),
     }];
-    box self.request(&req, handle).map(|_| ())
+    box self.request(&req).map(|_| ())
   }
 
-  fn show_panel(&self, msg: &tg::Message) -> tg::SendMessage {
+  fn show_panel(
+    &self,
+    chat: tg::ChatRef,
+    edit: Option<&tg::Message>,
+    bot: &tg::Api,
+  ) -> Box<Future<Item = (), Error = Error>> {
+    // to be moved into futures
+    let bot = bot.clone();
+    let state = self.current_state.clone();
+
+    // generate keyboard markup
     let mut markup = tg::InlineKeyboardMarkup::new();
     let functional_row = vec![
-      self.callback_button("Update state", "update"),
+      self.callback_button("Refresh", "update"),
       self.callback_button("Turn on", "on"),
       self.callback_button("Turn off", "off"),
     ];
@@ -213,9 +222,42 @@ impl Yeelight {
       markup.add_row(row);
     }
 
-    let mut req = msg.text_reply(self.report());
-    req.reply_markup(markup);
-    req
+    // get current state
+    let get_curr_state_fut = future::lazy(move || {
+      let state = state.lock().unwrap();
+      ok(
+        (*state)
+          .clone()
+          .map(|x| x.report())
+          .unwrap_or("Unable to get current state".into()),
+      )
+    });
+
+    match edit {
+      Some(msg) => {
+        let msg = msg.clone();
+        box (get_curr_state_fut
+          .and_then(move |curr_state_str| {
+            let mut req = msg.edit_text(curr_state_str);
+            req.reply_markup(markup).parse_mode(tg::ParseMode::Markdown);
+            bot.send(req)
+          })
+          .map(|_| ())
+          .map_err(SyncFailure::new)
+          .map_err(Error::Telegram))
+      }
+      None => {
+        box (get_curr_state_fut
+          .and_then(move |curr_state_str| {
+            let mut req = chat.text(curr_state_str);
+            req.reply_markup(markup).parse_mode(tg::ParseMode::Markdown);
+            bot.send(req)
+          })
+          .map(|_| ())
+          .map_err(SyncFailure::new)
+          .map_err(Error::Telegram))
+      }
+    }
   }
 
   fn render_modes(&self) -> Vec<Vec<tg::InlineKeyboardButton>> {
@@ -236,11 +278,19 @@ impl Yeelight {
     let locked = rc.lock().unwrap();
     (*locked).clone()
   }
+
+  fn add_mode(&mut self, input: &str) -> Result<String> {
+    let n = input.find("-").ok_or(Error::ModeInput)?;
+    let (name, mode) = input.split_at(n);
+    let mode = serde_json::from_str(mode).map_err(Error::Decode)?;
+    self.modes.push((name.into(), mode));
+    Ok(name.into())
+  }
 }
 
 impl BotExtension for Yeelight {
   fn init(ctx: &Context) -> Self {
-    let mut o: Yeelight = ctx.db.load_conf("yeelight").unwrap_or(Yeelight {
+    let o: Yeelight = ctx.db.load_conf("yeelight").unwrap_or(Yeelight {
       addr: Some(
         env::var("YEELIGHT_ADDR")
           .expect("yeelight address not specified.")
@@ -249,20 +299,38 @@ impl BotExtension for Yeelight {
       ),
       ..Default::default()
     });
-    let refresh_fut = o.refresh_state(&ctx.handle.clone());
-    ctx.handle.spawn(refresh_fut.map_err(|_| ()));
+    let refresh_fut = o.refresh_state();
+    ctx.handle.spawn(refresh_fut.then(|_| ok(())));
     o
   }
 
   fn process(&mut self, msg: &tg::Message, ctx: &Context) {
     if msg.is_cmd("yeelight") {
-      // self.control_panel(msg, ctx);
+      let fut = self.show_panel(msg.chat.to_chat_ref(), None, &ctx.bot);
+      ctx.handle.spawn(fut.map_err(|_| ()));
     } else if msg.is_cmd("set_yeelight_mode") {
-      // self.set_mode(msg, ctx);
+      msg
+        .cmd_arg()
+        .ok_or(Error::ModeInput)
+        .and_then(|arg| self.add_mode(&arg))
+        .map(|m| {
+          ctx.bot.spawn(
+            msg.text_reply(format!("Successfully added mode for: {}", m)),
+          )
+        })
+        .map_err(|e| {
+          let notice =
+            "Syntax: /set_yeelight_mode <mode_name> - [<req1>, <req2>, ...]\n\
+             req: {\"method\": <method>, params: [<param1>, <param2>, ...]";
+          ctx.bot.spawn(
+            msg.text_reply(format!("Failed to add mode: {}\n\n{}", e, notice)),
+          )
+        })
+        .ok();
+      ctx.db.save_conf("yeelight", &self);
     } else if msg.is_cmd("del_yeelight_mode") {
       // self.del_mode(msg, ctx);
     }
-    ctx.db.save_conf("yeelight", &self);
   }
 
   fn process_callback(&mut self, query: &tg::CallbackQuery, ctx: &Context) {
@@ -270,14 +338,35 @@ impl BotExtension for Yeelight {
       return;
     }
 
-    let fut = match query.key().unwrap() {
-      "update" => self.refresh_state(&ctx.handle),
-      "on" => self.switch_power(Power::On, &ctx.handle),
-      "off" => self.switch_power(Power::Off, &ctx.handle),
-      k => self.switch_to_mode(k, &ctx.handle),
+    let control_fut = match query.key().unwrap() {
+      "update" => box ok(()),
+      "on" => self.switch_power(Power::On),
+      "off" => self.switch_power(Power::Off),
+      k => self.switch_to_mode(k),
     };
 
-    unimplemented!()
+    let msg = query.message.clone();
+    let chat = msg.chat.to_chat_ref();
+    let show_panel_fut = self.show_panel(chat, Some(&msg), &ctx.bot);
+    let refresh_fut = self.refresh_state().and_then(|_| show_panel_fut);
+
+    let api1 = ctx.bot.clone();
+    let notify_fut = api1.send(query.acknowledge()).then(|_| ok(()));
+
+    let api2 = ctx.bot.clone();
+    let query = query.clone();
+    let notify_err_fut = move |e: Error| {
+      let req = query.answer(format!("Failed: {}", e));
+      api2.send(req).then(|_| ok(()))
+    };
+
+    let fut = control_fut
+      .and_then(|_| notify_fut)
+      .and_then(|_| refresh_fut)
+      .or_else(notify_err_fut)
+      .map(|_| ());
+
+    ctx.handle.spawn(fut);
   }
 
   fn report(&self) -> String {
@@ -285,36 +374,22 @@ impl BotExtension for Yeelight {
     if let None = state {
       return "Unable to get current state.".into();
     }
-    let state: State = state.unwrap();
-
-    let power = match state.power {
-      Power::On => "on (💚)",
-      Power::Off => "off",
-    };
-    format!(
-      "💡 [{name}] is currently powered {power}.\n \
-       - color: {color}\n \
-       - brightness: {brightness}\n",
-      name = &state.name,
-      power = &power,
-      color = &state.color,
-      brightness = &state.brightness
-    )
+    state.as_ref().unwrap().report()
   }
   fn name(&self) -> &str {
     "yeelight"
   }
 }
 
-impl Response {
-  fn is_ok(&self) -> bool {
-    true
-  }
+// impl Response {
+//   fn is_ok(&self) -> bool {
+//     true
+//   }
 
-  fn value(&self) -> Option<&String> {
-    self.result.iter().nth(0)
-  }
-}
+//   fn value(&self) -> Option<&String> {
+//     self.result.iter().nth(0)
+//   }
+// }
 
 impl ToString for Query {
   fn to_string(&self) -> String {
@@ -332,5 +407,36 @@ impl ToString for Power {
       Power::On => "on".into(),
       Power::Off => "off".into(),
     }
+  }
+}
+
+impl State {
+  fn color_hex(&self) -> String {
+    let c = self.color;
+    let r = (c >> 16) & 0xff;
+    let g = (c >> 8) & 0xff;
+    let b = (c >> 0) & 0xff;
+    format!("{:02X}{:02X}{:02X}", r, g, b)
+  }
+
+  fn report(&self) -> String {
+    let power = match self.power {
+      Power::On => "on (💚)",
+      Power::Off => "off",
+    };
+    let dur = Local::now().signed_duration_since(self.updated_at);
+
+    format!(
+      "💡 [{name}] is currently powered {power}.\n\
+       Color: {color}\n\
+       Brightness: {brightness}\n\
+       Last update: {updated_at} ({dur} ago)",
+      name = &self.name,
+      power = &power,
+      color = &self.color_hex(),
+      brightness = &self.brightness,
+      updated_at = format_time(&self.updated_at),
+      dur = format_duration(&dur)
+    )
   }
 }

@@ -1,7 +1,5 @@
 use common::*;
 
-use futures::prelude::*;
-
 use curl::easy::Easy;
 use serde_json::Value;
 
