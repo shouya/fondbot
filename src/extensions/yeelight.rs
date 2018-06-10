@@ -87,7 +87,7 @@ impl Yeelight {
         params: json!(["name", "bright", "rgb", "power", "ct"]),
       })
       .and_then(|resp| {
-        if resp.result.len() != 4 {
+        if resp.result.len() != 5 {
           return err(Error::Response(format!(
             "Response with incorrect length: {:?}",
             &resp
@@ -268,7 +268,7 @@ impl Yeelight {
 
   fn render_modes(&self) -> Vec<Vec<tg::InlineKeyboardButton>> {
     let mut rows = Vec::new();
-    for chunk in self.modes.chunks(3) {
+    for chunk in self.modes.chunks(4) {
       let mut row = Vec::new();
       for (name, _) in chunk {
         let key = format!("mode.{}", name);
