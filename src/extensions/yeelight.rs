@@ -322,7 +322,7 @@ impl Yeelight {
       ("Brightest", set_prop("set_bright", 100)),
       ("Brighter", inc_prop("bright")),
       ("Darker", dec_prop("bright")),
-      ("Darkest", set_prop("set_bright", 0)),
+      ("Darkest", set_prop("set_bright", 1)),
       ("Coldest", set_prop("set_ct_abx", 1700)),
       ("Colder", dec_prop("ct")),
       ("Warmer", inc_prop("ct")),
