@@ -27,11 +27,24 @@ pub enum MusicError {
 
 fn parse_song_id(url: &str) -> Option<u64> {
   lazy_static! {
-    static ref RE: Regex =
-      Regex::new(r"http(s?)://music\.163\.com/.*?/song\?id=(\d+)").unwrap();
+    static ref PATTERNS: Vec<Regex> = vec![
+      r"http(s?)://music\.163\.com/#/song\?id=(?P<id>\d+).*",
+      r"http(s?)://music\.163\.com/song\?id=(?P<id>\d+).*",
+      r"http(s?)://music\.163\.com/#/m/song\?id=(?P<id>\d+).*",
+      r"http(s?)://music\.163\.com/song/(?P<id>\d+).*/?.*",
+    ].into_iter()
+      .map(Regex::new)
+      .map(|x| x.unwrap())
+      .collect();
   }
-  RE.captures(url)
-    .and_then(|cap| cap[2].parse::<u64>().ok())
+
+  for re in PATTERNS.iter() {
+    re.captures(url)
+      .and_then(|cap| cap["id"].parse::<u64>().ok())
+      .and_then(|id| return Some(id));
+  }
+
+  None
 }
 
 impl AudioDetail {
@@ -44,10 +57,8 @@ impl AudioDetail {
     id: u64,
     handle: &reactor::Handle,
   ) -> impl Future<Item = Self, Error = MusicError> {
-    let api_url = format!(
-      "https://music.163.com/api/song/detail/?ids=[{}]",
-      id
-    );
+    let api_url =
+      format!("https://music.163.com/api/song/detail/?ids=[{}]", id);
     let song = request(handle, &api_url)
       .map_err(|e| MusicError::Request(e))
       .and_then(move |value: Value| {
@@ -61,12 +72,8 @@ impl AudioDetail {
 
     song.and_then(move |song: Value| {
       let title = song["name"].as_str().unwrap().into();
-      let performer = song["artists"][0]["name"]
-        .as_str()
-        .map(|x| x.into());
-      let album = song["album"][0]["name"]
-        .as_str()
-        .map(|x| x.into());
+      let performer = song["artists"][0]["name"].as_str().map(|x| x.into());
+      let album = song["album"][0]["name"].as_str().map(|x| x.into());
 
       ok(Self {
         id,
@@ -83,9 +90,10 @@ impl BotExtension for Music {
   where
     Self: Sized,
   {
-    ctx.db.load_conf("music").unwrap_or(Music {
-      auto_parse: true,
-    })
+    ctx
+      .db
+      .load_conf("music")
+      .unwrap_or(Music { auto_parse: true })
   }
 
   fn process(&mut self, msg: &tg::Message, ctx: &Context) {
@@ -128,18 +136,10 @@ impl Music {
     let msg = msg.clone();
 
     let download_action = bot
-      .send(
-        msg
-          .chat
-          .chat_action(tg::ChatAction::RecordAudio),
-      )
+      .send(msg.chat.chat_action(tg::ChatAction::RecordAudio))
       .from_err();
     let upload_action = bot
-      .send(
-        msg
-          .chat
-          .chat_action(tg::ChatAction::UploadAudio),
-      )
+      .send(msg.chat.chat_action(tg::ChatAction::UploadAudio))
       .from_err();
 
     let download_fut = download_action
@@ -167,15 +167,11 @@ impl Music {
     let mut curl = Easy::new();
     let mut headers = List::new();
 
-    let url = format!(
-      "http://music.163.com/song/media/outer/url?id={}.mp3",
-      id
-    );
+    let url =
+      format!("http://music.163.com/song/media/outer/url?id={}.mp3", id);
     curl.url(&url).unwrap();
 
-    headers
-      .append("X-Real-IP: 221.192.199.49")
-      .unwrap();
+    headers.append("X-Real-IP: 221.192.199.49").unwrap();
 
     curl.http_headers(headers).unwrap();
     curl.follow_location(true).unwrap();
@@ -218,10 +214,7 @@ impl Music {
       part.add().unwrap();
     }
 
-    let url = format!(
-      "https://api.telegram.org/bot{}/sendAudio",
-      bot_token
-    );
+    let url = format!("https://api.telegram.org/bot{}/sendAudio", bot_token);
     curl.url(&url).unwrap();
     curl.httppost(form).unwrap();
     curl.perform().expect("Failed sending audio");
