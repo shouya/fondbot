@@ -319,14 +319,14 @@ impl Yeelight {
     };
 
     vec![
-      ("Brightest", set_prop("bright", 100)),
+      ("Brightest", set_prop("set_bright", 100)),
       ("Brighter", inc_prop("bright")),
       ("Darker", dec_prop("bright")),
-      ("Darkest", set_prop("bright", 0)),
-      ("Coldest", set_prop("ct", 1700)),
+      ("Darkest", set_prop("set_bright", 0)),
+      ("Coldest", set_prop("set_ct_abx", 1700)),
       ("Colder", dec_prop("ct")),
       ("Warmer", inc_prop("ct")),
-      ("Warmest", set_prop("ct", 6500)),
+      ("Warmest", set_prop("set_ct_abx", 6500)),
     ].into_iter()
       .map(|(a, b)| (a.into(), b))
       .collect()
