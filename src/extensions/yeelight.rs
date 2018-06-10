@@ -328,7 +328,7 @@ impl BotExtension for Yeelight {
         })
         .map_err(|e| {
           let notice =
-            "Usage: /del_yeelight_mode <mode_name> - [<req>, <req>, ...]\n\
+            "Usage: /add_yeelight_mode <mode_name> - [<req>, <req>, ...]\n\
              <req>: {\"method\": <method>, \"params\": [<param>, <param>, ...]";
           ctx.bot.spawn(
             msg.text_reply(format!("Failed to add mode: {}\n\n{}", e, notice)),
@@ -372,7 +372,7 @@ impl BotExtension for Yeelight {
       "update" => box ok(()),
       "on" => self.switch_power(Power::On),
       "off" => self.switch_power(Power::Off),
-      k => self.switch_to_mode(k),
+      k => self.switch_to_mode(k.trim_left_matches("mode.")),
     };
 
     let msg = query.message.clone();

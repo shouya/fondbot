@@ -101,7 +101,7 @@ impl Db {
     self.execute_sql(&format!(
       "INSERT OR REPLACE INTO config (id, key, value)
       VALUES (
-          (SELECT id FROM config WHERE key = {key})
+          (SELECT id FROM config WHERE key = '{key}'),
           '{key}',
           '{val}'
       )",
