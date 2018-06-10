@@ -67,8 +67,11 @@ pub enum Error {
   #[fail(display = "Bot API error: {}", _0)]
   Telegram(#[cause] SyncFailure<tg::Error>),
 
-  #[fail(display = "Invalid mode input")]
-  ModeInput,
+  #[fail(display = "Invalid mode format")]
+  ModeFormat,
+
+  #[fail(display = "Mode already exist: {}", _0)]
+  ModeAlreadyExist(String),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -279,10 +282,15 @@ impl Yeelight {
     (*locked).clone()
   }
 
-  fn add_mode(&mut self, input: &str) -> Result<String> {
-    let n = input.find("-").ok_or(Error::ModeInput)?;
+  pub fn add_mode(&mut self, input: &str) -> Result<String> {
+    let n = input.find("-").ok_or(Error::ModeFormat)?;
     let (name, mode) = input.split_at(n);
+    let name = name.trim();
+    let mode = mode.trim_left_matches("-");
     let mode = serde_json::from_str(mode).map_err(Error::Decode)?;
+    if self.modes.iter().find(|(n, _)| n == name).is_some() {
+      return Err(Error::ModeAlreadyExist(name.into()));
+    }
     self.modes.push((name.into(), mode));
     Ok(name.into())
   }
@@ -308,10 +316,10 @@ impl BotExtension for Yeelight {
     if msg.is_cmd("yeelight") {
       let fut = self.show_panel(msg.chat.to_chat_ref(), None, &ctx.bot);
       ctx.handle.spawn(fut.map_err(|_| ()));
-    } else if msg.is_cmd("set_yeelight_mode") {
+    } else if msg.is_cmd("add_yeelight_mode") {
       msg
         .cmd_arg()
-        .ok_or(Error::ModeInput)
+        .ok_or(Error::ModeFormat)
         .and_then(|arg| self.add_mode(&arg))
         .map(|m| {
           ctx.bot.spawn(
@@ -320,8 +328,8 @@ impl BotExtension for Yeelight {
         })
         .map_err(|e| {
           let notice =
-            "Syntax: /set_yeelight_mode <mode_name> - [<req1>, <req2>, ...]\n\
-             req: {\"method\": <method>, params: [<param1>, <param2>, ...]";
+            "Usage: /del_yeelight_mode <mode_name> - [<req>, <req>, ...]\n\
+             <req>: {\"method\": <method>, \"params\": [<param>, <param>, ...]";
           ctx.bot.spawn(
             msg.text_reply(format!("Failed to add mode: {}\n\n{}", e, notice)),
           )
@@ -329,7 +337,29 @@ impl BotExtension for Yeelight {
         .ok();
       ctx.db.save_conf("yeelight", &self);
     } else if msg.is_cmd("del_yeelight_mode") {
-      // self.del_mode(msg, ctx);
+      let mode_name = msg.cmd_arg();
+      if mode_name.is_none() {
+        ctx
+          .bot
+          .reply_to(msg, "Usage: /del_yeelight_mode <mode_name>");
+      } else {
+        let mode_name = mode_name.unwrap();
+        self
+          .modes
+          .iter()
+          .position(|(name, _)| name.as_str() == mode_name)
+          .map(|n| {
+            self.modes.remove(n);
+            ctx
+              .bot
+              .reply_to(msg, format!("Successfully removed {}", mode_name))
+          })
+          .or_else(|| {
+            ctx.bot.reply_to(msg, format!("Cannot find {}", mode_name));
+            None
+          });
+      }
+      ctx.db.save_conf("yeelight", &self);
     }
   }
 

@@ -2,6 +2,7 @@ afk - [reason] - set afk
 noafk - no afk
 remind_me - [take pill] - set reminder
 weather - check weather
+yeelight - yeelight control panel
 search - [pattern] - search through history
 enable_search_for_chat - enable recording history and searching in this group
 enable_search_for_me - enable search for my messages

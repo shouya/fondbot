@@ -140,11 +140,12 @@ fn main() {
 
 #[allow(dead_code)]
 fn debug() {
-  let yee = extensions::yeelight::Yeelight {
+  let mut yee = extensions::yeelight::Yeelight {
     addr: Some("10.144.233.101:55443".parse().unwrap()),
     ..Default::default()
   };
-  let mut core = reactor::Core::new().unwrap();
+  // let mut core = reactor::Core::new().unwrap();
+  let res = yee.add_mode(r#"Test-[{"method": "a","params":["a","b"]}]"#);
 
-  println!("{:?}", core.run(yee.query_current_state()));
+  println!("{:?}\n{:?}", res, yee);
 }
