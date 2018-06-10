@@ -20,15 +20,16 @@ enum Power {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct State {
   name: String,
-  brightness: i32,
+  brightness: u32,
   color: u32,
+  color_temperature: u32,
   power: Power,
   updated_at: DateTime<Local>,
 }
 
 type Request = Vec<Query>;
 
-#[derive(Serialize, Deserialize, Default, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Yeelight {
   pub addr: Option<SocketAddr>,
   pub modes: Vec<(String, Request)>,
@@ -83,7 +84,7 @@ impl Yeelight {
     self
       .request1(&Query {
         method: "get_prop".into(),
-        params: json!(["name", "bright", "rgb", "power"]),
+        params: json!(["name", "bright", "rgb", "power", "ct"]),
       })
       .and_then(|resp| {
         if resp.result.len() != 4 {
@@ -96,12 +97,13 @@ impl Yeelight {
         let mut vals = resp.result;
 
         let name = vals.remove(0);
-        let brightness = vals.remove(0).parse::<i32>().unwrap();
+        let brightness = vals.remove(0).parse::<u32>().unwrap();
         let color = vals.remove(0).parse::<u32>().unwrap();
         let power = match vals.remove(0).as_str() {
           "on" => Power::On,
           _ => Power::Off,
         };
+        let color_temperature = vals.remove(0).parse::<u32>().unwrap();
         let updated_at = Local::now();
 
         ok(State {
@@ -109,6 +111,7 @@ impl Yeelight {
           brightness,
           power,
           color,
+          color_temperature,
           updated_at,
         })
       })
@@ -294,21 +297,46 @@ impl Yeelight {
     self.modes.push((name.into(), mode));
     Ok(name.into())
   }
+
+  pub fn default_modes() -> Vec<(String, Request)> {
+    let set_prop = |method: &str, value| {
+      vec![Query {
+        method: method.into(),
+        params: json!([value, "smooth", 500]),
+      }]
+    };
+    let inc_prop = |prop| {
+      vec![Query {
+        method: "set_adjust".into(),
+        params: json!(["increase", prop]),
+      }]
+    };
+    let dec_prop = |prop| {
+      vec![Query {
+        method: "set_adjust".into(),
+        params: json!(["decrease", prop]),
+      }]
+    };
+
+    vec![
+      ("Brightest", set_prop("bright", 100)),
+      ("Brighter", inc_prop("bright")),
+      ("Darker", dec_prop("bright")),
+      ("Darkest", set_prop("bright", 0)),
+      ("Coldest", set_prop("ct", 1700)),
+      ("Colder", dec_prop("ct")),
+      ("Warmer", inc_prop("ct")),
+      ("Warmest", set_prop("ct", 6500)),
+    ].into_iter()
+      .map(|(a, b)| (a.into(), b))
+      .collect()
+  }
 }
 
 impl BotExtension for Yeelight {
   fn init(ctx: &Context) -> Self {
-    let o: Yeelight = ctx.db.load_conf("yeelight").unwrap_or(Yeelight {
-      addr: Some(
-        env::var("YEELIGHT_ADDR")
-          .expect("yeelight address not specified.")
-          .parse()
-          .unwrap(),
-      ),
-      ..Default::default()
-    });
-    let refresh_fut = o.refresh_state();
-    ctx.handle.spawn(refresh_fut.then(|_| ok(())));
+    let o: Yeelight = ctx.db.load_conf("yeelight").unwrap_or_default();
+    ctx.handle.spawn(o.refresh_state().then(|_| ok(())));
     o
   }
 
@@ -451,22 +479,34 @@ impl State {
 
   fn report(&self) -> String {
     let power = match self.power {
-      Power::On => "on (💚)",
-      Power::Off => "off",
+      Power::On => "on 💡",
+      Power::Off => "off 🔌",
     };
     let dur = Local::now().signed_duration_since(self.updated_at);
 
     format!(
-      "💡 [{name}] is currently powered {power}.\n\
+      "{name} is currently powered {power}.\n\
        Color: {color}\n\
+       Color Temperature: {color_temperature}K\n\
        Brightness: {brightness}\n\
        Last update: {updated_at} ({dur} ago)",
       name = &self.name,
       power = &power,
       color = &self.color_hex(),
+      color_temperature = &self.color_temperature,
       brightness = &self.brightness,
       updated_at = format_time(&self.updated_at),
       dur = format_duration(&dur)
     )
+  }
+}
+
+impl Default for Yeelight {
+  fn default() -> Self {
+    Yeelight {
+      addr: env::var("YEELIGHT_ADDR").ok().and_then(|x| x.parse().ok()),
+      modes: Yeelight::default_modes(),
+      current_state: Arc::new(Mutex::new(None)),
+    }
   }
 }
