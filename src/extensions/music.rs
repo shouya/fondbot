@@ -39,9 +39,12 @@ fn parse_song_id(url: &str) -> Option<u64> {
   }
 
   for re in PATTERNS.iter() {
-    re.captures(url)
-      .and_then(|cap| cap["id"].parse::<u64>().ok())
-      .and_then(|id| return Some(id));
+    let parsed_id = re
+      .captures(url)
+      .and_then(|cap| cap["id"].parse::<u64>().ok());
+    if let Some(id) = parsed_id {
+      return Some(id);
+    }
   }
 
   None

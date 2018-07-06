@@ -24,7 +24,7 @@ pub use serde::ser::Serialize;
 pub use slog;
 pub use slog::Logger;
 
-pub use regex::Regex;
+pub use regex::{Regex, RegexSet};
 
 pub use bot::{reply, TgApiExt, TgCallbackQueryExt, TgMessageExt};
 
