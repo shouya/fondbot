@@ -22,7 +22,7 @@ impl LinkCleanser {
       return None;
     }
 
-    if url.query().is_none() || url.host_str().is_none() {
+    if url.host_str().is_none() {
       return None;
     }
 
@@ -131,6 +131,11 @@ mod test {
     assert_cleanse(
       "https://item.m.jd.com/product/4385461.html?&utm_source=iosapp&utm_medium=appshare&utm_campaign=t_3139j9774&utm_term=CopyURL",
       "https://item.jd.com/4385461.html"
+    );
+
+    assert_cleanse(
+      "https://item.m.jd.com/product/4385461.html",
+      "https://item.jd.com/4385461.html",
     );
 
     assert_cleanse(
