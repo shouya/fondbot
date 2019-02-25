@@ -24,7 +24,7 @@ impl TgApiExt for tg::Api {
     use futures::future::{loop_fn, Loop};
     let init_state: (tg::Integer, Vec<tg::Update>) = (0, Vec::new());
 
-    box loop_fn(init_state, move |(last, consumed)| {
+    Box::new(loop_fn(init_state, move |(last, consumed)| {
       let req = tg::GetUpdates::new().offset(last).clone();
       self.send(req).and_then(|batch| {
         if batch.is_empty() {
@@ -36,7 +36,7 @@ impl TgApiExt for tg::Api {
           Ok(Loop::Continue((new_last, new_consumed)))
         }
       })
-    })
+    }))
   }
 
   fn reply_to<'s, R, T>(&self, to: R, text: T)
@@ -140,8 +140,8 @@ impl TgMessageExt for tg::Message {
   }
 
   fn is_force_reply(&self, prompt: &str) -> bool {
-    match self.reply_to_message {
-      Some(box tg::MessageOrChannelPost::Message(ref refer)) => {
+    match self.reply_to_message.map(|x| x.as_ref()) {
+      Some(tg::MessageOrChannelPost::Message(ref refer)) => {
         refer.text_content() == Some(prompt.into())
       }
       _ => false,
@@ -149,8 +149,8 @@ impl TgMessageExt for tg::Message {
   }
 
   fn is_reply_to_bot(&self) -> bool {
-    match self.reply_to_message {
-      Some(box tg::MessageOrChannelPost::Message(ref refer)) => refer
+    match self.reply_to_message.map(|x| x.as_ref()) {
+      Some(tg::MessageOrChannelPost::Message(ref refer)) => refer
         .from
         .username
         .as_ref()

@@ -120,10 +120,10 @@ impl Yeelight {
   fn refresh_state(&self) -> Box<Future<Item = State, Error = Error>> {
     let state_ref = self.current_state.clone();
 
-    box self.query_current_state().and_then(move |new_state| {
+    Box::new(self.query_current_state().and_then(move |new_state| {
       *state_ref.lock().unwrap() = Some(new_state.clone());
       ok(new_state)
-    })
+    }))
   }
 
   fn request(
@@ -134,19 +134,21 @@ impl Yeelight {
 
     let mut conn: Box<
       Future<Item = (TcpStream, Vec<Response>), Error = Error>,
-    > = box self
-      .addr
-      .ok_or(Error::NotReady)
-      .into_future()
-      .and_then(move |addr| {
-        TcpStream::connect2(&addr).map_err(|_| Error::Network)
-      })
-      .map(|stream| (stream, Vec::new()));
+    > = Box::new(
+      self
+        .addr
+        .ok_or(Error::NotReady)
+        .into_future()
+        .and_then(move |addr| {
+          TcpStream::connect2(&addr).map_err(|_| Error::Network)
+        })
+        .map(|stream| (stream, Vec::new())),
+    );
 
     for q in req {
       let req_str = q.to_string();
 
-      conn = box conn.and_then(move |(mut stream, mut carry)| {
+      conn = Box::new(conn.and_then(move |(mut stream, mut carry)| {
         write!(stream, "{}\r\n", &req_str).ok();
         stream.flush().ok();
         while stream.poll_read().is_not_ready() {}
@@ -160,7 +162,7 @@ impl Yeelight {
           }
           Err(e) => err(Error::Decode(e)),
         }
-      });
+      }));
     }
 
     conn.map(|(_, carry)| carry)
@@ -189,10 +191,10 @@ impl Yeelight {
       .map(|(_, req)| req);
 
     if req.is_none() {
-      return box err(Error::Mode(name.into()));
+      return Box::new(err(Error::Mode(name.into())));
     }
 
-    box self.request(req.unwrap().as_slice()).map(|_| ())
+    Box::new(self.request(req.unwrap().as_slice()).map(|_| ()))
   }
 
   fn switch_power(
@@ -203,7 +205,7 @@ impl Yeelight {
       method: "set_power".into(),
       params: json!([power.to_string(), "smooth", 500]),
     }];
-    box self.request(&req).map(|_| ())
+    Box::new(self.request(&req).map(|_| ()))
   }
 
   fn show_panel(
@@ -242,18 +244,20 @@ impl Yeelight {
     match edit {
       Some(msg) => {
         let msg = msg.clone();
-        box (get_curr_state_fut
-          .and_then(move |curr_state_str| {
-            let mut req = msg.edit_text(curr_state_str);
-            req.reply_markup(markup).parse_mode(tg::ParseMode::Markdown);
-            bot.send(req)
-          })
-          .map(|_| ())
-          .map_err(SyncFailure::new)
-          .map_err(Error::Telegram))
+        Box::new(
+          get_curr_state_fut
+            .and_then(move |curr_state_str| {
+              let mut req = msg.edit_text(curr_state_str);
+              req.reply_markup(markup).parse_mode(tg::ParseMode::Markdown);
+              bot.send(req)
+            })
+            .map(|_| ())
+            .map_err(SyncFailure::new)
+            .map_err(Error::Telegram),
+        )
       }
-      None => {
-        box (get_curr_state_fut
+      None => Box::new(
+        get_curr_state_fut
           .and_then(move |curr_state_str| {
             let mut req = chat.text(curr_state_str);
             req.reply_markup(markup).parse_mode(tg::ParseMode::Markdown);
@@ -261,8 +265,8 @@ impl Yeelight {
           })
           .map(|_| ())
           .map_err(SyncFailure::new)
-          .map_err(Error::Telegram))
-      }
+          .map_err(Error::Telegram),
+      ),
     }
   }
 
@@ -327,9 +331,10 @@ impl Yeelight {
       ("Colder", dec_prop("ct")),
       ("Warmer", inc_prop("ct")),
       ("Warmest", set_prop("set_ct_abx", 6500)),
-    ].into_iter()
-      .map(|(a, b)| (a.into(), b))
-      .collect()
+    ]
+    .into_iter()
+    .map(|(a, b)| (a.into(), b))
+    .collect()
   }
 }
 
@@ -397,7 +402,7 @@ impl BotExtension for Yeelight {
     }
 
     let control_fut = match query.key().unwrap() {
-      "update" => box ok(()),
+      "update" => Box::new(ok(())),
       "on" => self.switch_power(Power::On),
       "off" => self.switch_power(Power::Off),
       k => self.switch_to_mode(k.trim_left_matches("mode.")),
@@ -455,7 +460,8 @@ impl ToString for Query {
       "id": 1,
       "method": self.method,
       "params": self.params
-    })).unwrap()
+    }))
+    .unwrap()
   }
 }
 

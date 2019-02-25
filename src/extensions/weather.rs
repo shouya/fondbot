@@ -124,13 +124,15 @@ impl Display for Caiyun {
       f,
       "*Temperature*: {:.0}℃ ({:.0}-{:.0}℃)\n",
       temp_curr, temp_lo, temp_hi
-    ).ok();
+    )
+    .ok();
     write!(
       f,
       "*Humidity*: {:.0}-{:.0}%\n",
       hmd_lo * 100.0,
       hmd_hi * 100.0
-    ).ok();
+    )
+    .ok();
     write!(f, "*AQI*: {}", self.fmt_aqi()).ok();
 
     Ok(())
@@ -148,12 +150,14 @@ impl WeatherProvider for Caiyun {
     let url =
       format!("{}/{}/{}/forecast.json", CAIYUN_API_BASE, api_key, long_lat);
 
-    box request(handle, &url)
-      .from_err()
-      .map(|mut weather_data: Self| {
-        weather_data.truncate_result();
-        weather_data
-      })
+    Box::new(
+      request(handle, &url)
+        .from_err()
+        .map(|mut weather_data: Self| {
+          weather_data.truncate_result();
+          weather_data
+        }),
+    )
   }
 }
 
@@ -253,11 +257,7 @@ fn fmt_skycon(skycon: &String) -> String {
 
 // Why not derive? because f32 does not implement Ord
 use std::cmp::{Eq, Ord, Ordering, PartialOrd};
-impl<T> Eq for _CaiyunResultValue<T>
-where
-  T: PartialEq,
-{
-}
+impl<T> Eq for _CaiyunResultValue<T> where T: PartialEq {}
 impl<T> Ord for _CaiyunResultValue<T>
 where
   _CaiyunResultValue<T>: PartialOrd + Eq,

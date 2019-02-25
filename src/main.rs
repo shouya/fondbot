@@ -1,12 +1,3 @@
-// #![feature(custom_attribute)]
-#![feature(iterator_for_each)]
-#![feature(box_patterns)]
-#![feature(associated_type_defaults)]
-#![feature(box_syntax)]
-#![feature(option_filter)]
-#![feature(proc_macro, generators)]
-#![feature(slice_patterns)]
-
 #[macro_use]
 pub extern crate diesel;
 #[macro_use]
@@ -19,7 +10,6 @@ pub extern crate serde_derive;
 pub extern crate slog;
 
 pub extern crate failure;
-#[macro_use]
 pub extern crate failure_derive;
 
 extern crate dotenv;
@@ -110,6 +100,7 @@ fn main() {
   ctx.plug_ext::<reminder::ReminderPool>();
   ctx.plug_ext::<music::Music>();
   ctx.plug_ext::<yeelight::Yeelight>();
+  ctx.plug_ext::<link_cleanser::LinkCleanser>();
 
   let serve = {
     let webhook_callback = env::var("TELEGRAM_WEBHOOK_CALLBACK");

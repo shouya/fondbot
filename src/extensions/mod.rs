@@ -6,6 +6,7 @@ pub mod history;
 pub mod music;
 pub mod reminder;
 pub mod yeelight;
+pub mod link_cleanser;
 
 use common::*;
 
@@ -31,7 +32,8 @@ pub trait BotExtension {
 
 pub trait InteractiveBuilder {
   type Target;
-  type Prompt = &'static str;
+  // type Prompt = &'static str;
+  type Prompt;
 
   fn build(&self) -> Option<Self::Target>;
   fn prompt(

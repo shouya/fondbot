@@ -41,7 +41,7 @@ impl Context {
     &'a mut self,
   ) -> Box<Future<Item = (), Error = ()> + 'a> {
     let req = self.bot.send(tg::DeleteWebhook);
-    box req.map_err(|_| ()).then(|_| {
+    Box::new(req.map_err(|_| ()).then(|_| {
       self
         .bot
         .stream()
@@ -50,7 +50,7 @@ impl Context {
           ok(())
         })
         .map_err(|_| ())
-    })
+    }))
   }
 
   pub fn serve_webhook<'a>(
@@ -65,10 +65,10 @@ impl Context {
         .parse()
         .expect(&format!("invalid bind format {}", bind)),
     );
-    box webhook.for_each(move |update| {
+    Box::new(webhook.for_each(move |update| {
       self.process_update(update);
       ok(())
-    })
+    }))
   }
 
   pub fn process_callback(&mut self, query: &tg::CallbackQuery) {
