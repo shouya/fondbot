@@ -140,7 +140,8 @@ impl TgMessageExt for tg::Message {
   }
 
   fn is_force_reply(&self, prompt: &str) -> bool {
-    match self.reply_to_message.map(|x| x.as_ref()) {
+    let reply_msg = &self.reply_to_message;
+    match reply_msg.clone().map(|x| *x) {
       Some(tg::MessageOrChannelPost::Message(ref refer)) => {
         refer.text_content() == Some(prompt.into())
       }
@@ -149,7 +150,8 @@ impl TgMessageExt for tg::Message {
   }
 
   fn is_reply_to_bot(&self) -> bool {
-    match self.reply_to_message.map(|x| x.as_ref()) {
+    let reply_msg = &self.reply_to_message;
+    match reply_msg.clone().map(|x| *x) {
       Some(tg::MessageOrChannelPost::Message(ref refer)) => refer
         .from
         .username

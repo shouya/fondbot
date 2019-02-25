@@ -131,12 +131,12 @@ fn main() {
 
 #[allow(dead_code)]
 fn debug() {
-  let mut yee = extensions::yeelight::Yeelight {
-    addr: Some("10.144.233.101:55443".parse().unwrap()),
-    ..Default::default()
-  };
-  // let mut core = reactor::Core::new().unwrap();
-  let res = yee.add_mode(r#"Test-[{"method": "a","params":["a","b"]}]"#);
+  // let mut yee = extensions::yeelight::Yeelight {
+  //   addr: Some("10.144.233.101:55443".parse().unwrap()),
+  //   ..Default::default()
+  // };
+  // // let mut core = reactor::Core::new().unwrap();
+  // let res = yee.add_mode(r#"Test-[{"method": "a","params":["a","b"]}]"#);
 
-  println!("{:?}\n{:?}", res, yee);
+  println!("{}", url::Url::parse("https://a.com/path?b=1").unwrap().path());
 }
