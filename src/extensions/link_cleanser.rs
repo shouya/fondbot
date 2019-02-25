@@ -8,7 +8,13 @@ pub struct LinkCleanser;
 
 impl LinkCleanser {
   fn parse_url(txt: &str) -> Option<Url> {
-    Url::from_str(txt).ok()
+    lazy_static! {
+      static ref URL_REGEX: Regex = Regex::new(r"(http|https)://[\w-]+(\.[\w-]+)+([\w.,@?^=%&amp;:/~+#-]*[\w@?^=%&/~+#-])?").unwrap();
+    }
+
+    URL_REGEX
+      .find(txt)
+      .and_then(|m| Url::from_str(m.as_str()).ok())
   }
 
   fn primitive_filter(url: Url) -> Option<Url> {
@@ -30,8 +36,19 @@ impl LinkCleanser {
       return Self::whitelist_query(url, &["id"], true);
     }
 
-    if Self::domain_suffix_in(&url, &["item.jd.com"]) {
+    if Self::domain_suffix_in(&url, &["intl.taobao.com", "intl.m.taobao.com"])
+      && url.path() == "/detail/detail.html"
+    {
+      url.set_host(Some("item.taobao.com")).ok()?;
+      url.set_path("/item.htm");
+      return Self::whitelist_query(url, &["id"], true);
+    }
+
+    if Self::domain_suffix_in(&url, &["item.jd.com", "item.m.jd.com"]) {
+      url.set_host(Some("item.jd.com")).ok()?;
       url.set_query(None);
+      let path = url.path().replace("/product/", "/");
+      url.set_path(&path);
       return Some(url);
     }
 
@@ -84,8 +101,53 @@ impl LinkCleanser {
 
     Some(url)
   }
+
+  fn text_pipeline(text: &str) -> Option<String> {
+    Self::parse_url(text)
+      .and_then(Self::primitive_filter)
+      .and_then(Self::cleanse_url)
+      .map(|url| url.into_string())
+      .and_then(|clean_url| {
+        if clean_url == text {
+          None
+        } else {
+          Some(clean_url)
+        }
+      })
+  }
 }
 
+#[cfg(test)]
+mod test {
+  use super::*;
+
+  #[test]
+  fn test_pipeline() {
+    assert_cleanse(
+      "https://item.taobao.com/item.htm?spm=b130k.1.12.81.991c63ccnNGlO9&id=574189924259&ns=1&abbucket=8#detail",
+      "https://item.taobao.com/item.htm?id=574189924259#detail"
+    );
+
+    assert_cleanse(
+      "https://item.m.jd.com/product/4385461.html?&utm_source=iosapp&utm_medium=appshare&utm_campaign=t_3139j9774&utm_term=CopyURL",
+      "https://item.jd.com/4385461.html"
+    );
+
+    assert_cleanse(
+      "https://m.intl.taobao.com/detail/detail.html?id=3933748539",
+      "https://item.taobao.com/item.htm?id=3933748539",
+    );
+
+    assert_cleanse(
+      "aaa bbb https://m.intl.taobao.com/detail/detail.html?id=3933748539\nccc",
+      "https://item.taobao.com/item.htm?id=3933748539",
+    );
+  }
+
+  fn assert_cleanse(input: &str, output: &str) {
+    assert_eq!(LinkCleanser::text_pipeline(input), Some(output.into()))
+  }
+}
 impl BotExtension for LinkCleanser {
   fn init(_ctx: &Context) -> Self {
     Self
@@ -97,17 +159,7 @@ impl BotExtension for LinkCleanser {
       Some(t) => t,
     };
 
-    Self::parse_url(&text)
-      .and_then(Self::primitive_filter)
-      .and_then(Self::cleanse_url)
-      .map(|url| url.into_string())
-      .and_then(|clean_url| {
-        if clean_url == text {
-          None
-        } else {
-          Some(clean_url)
-        }
-      })
+    Self::text_pipeline(&text)
       .map(|clean_url| ctx.bot.reply_to(msg, clean_url));
   }
 
