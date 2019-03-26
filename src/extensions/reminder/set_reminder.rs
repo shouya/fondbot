@@ -1,5 +1,5 @@
-use common::*;
 use super::*;
+use common::*;
 
 #[derive(Clone, Debug)]
 pub struct SetReminder {
@@ -219,8 +219,10 @@ impl SetReminder {
     let req = tg::SendMessage::new(
       self.chat_id,
       "What do you want to be reminded about?",
-    ).reply_markup(tg::ForceReply::new().selective().clone())
-      .clone();
+    )
+    .reply_markup(tg::ForceReply::new().selective().clone())
+    .reply_to(self.message_id)
+    .clone();
     ctx.bot.spawn(req);
   }
 
@@ -231,7 +233,10 @@ impl SetReminder {
       format_human_time(remind_at),
       format_duration(&remind_at.signed_duration_since(Local::now()))
     );
-    let req = msg.edit_text(text).clone();
+    let req = msg
+      .edit_text(text)
+      .reply_markup(tg::ReplyKeyboardRemove::new())
+      .clone();
     ctx.bot.spawn(req);
   }
 
