@@ -1,6 +1,6 @@
-use common::*;
+use crate::common::*;
 use std::result;
-use extensions as ext;
+use crate::extensions as ext;
 
 #[derive(Fail, Debug)]
 pub enum FondbotError {

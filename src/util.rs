@@ -1,4 +1,4 @@
-use common::*;
+use crate::common::*;
 
 pub fn ellipsis(s: &str, trunc_len: usize) -> String {
   let str_len = s.chars().count();

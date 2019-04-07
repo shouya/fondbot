@@ -1,4 +1,4 @@
-use common::*;
+use crate::common::*;
 
 use serde::de::DeserializeOwned;
 use serde_json;

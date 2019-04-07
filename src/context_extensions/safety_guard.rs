@@ -1,4 +1,4 @@
-use common::*;
+use crate::common::*;
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct SafetyGuard {

@@ -1,4 +1,4 @@
-use common::*;
+use crate::common::*;
 
 use curl::easy::Easy;
 use serde_json::Value;

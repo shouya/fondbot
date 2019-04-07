@@ -1,4 +1,4 @@
-use common::*;
+use crate::common::*;
 
 pub struct Context {
   pub bot: tg::Api,
@@ -13,7 +13,7 @@ pub struct Context {
 
 impl Context {
   pub fn new(bot: tg::Api, handle: reactor::Handle, logger: Logger) -> Context {
-    use ContextExtension;
+    use crate::ContextExtension;
     let db = Db::init();
 
     let guard = SafetyGuard::new(&db);

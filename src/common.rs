@@ -7,8 +7,8 @@ pub use std::fmt::{Debug, Display};
 pub use std::ops::{Deref, DerefMut, Drop};
 
 pub use telegram_bot as tg;
-pub use tg::prelude::*;
-pub use tg::ParseMode::{Html, Markdown};
+pub use crate::tg::prelude::*;
+pub use crate::tg::ParseMode::{Html, Markdown};
 
 pub use tokio_core::reactor;
 
@@ -26,28 +26,28 @@ pub use slog::Logger;
 
 pub use regex::{Regex, RegexSet};
 
-pub use bot::{reply, TgApiExt, TgCallbackQueryExt, TgMessageExt};
+pub use crate::bot::{reply, TgApiExt, TgCallbackQueryExt, TgMessageExt};
 
-pub use context::Context;
-pub use context_extensions::ContextExtension;
-pub use db::Db;
-pub use extensions::{BotExtension, ExtensionError, InteractiveBuilder};
-pub use services::request::request;
-pub use services::request::RequestError;
+pub use crate::context::Context;
+pub use crate::context_extensions::ContextExtension;
+pub use crate::db::Db;
+pub use crate::extensions::{BotExtension, ExtensionError, InteractiveBuilder};
+pub use crate::services::request::request;
+pub use crate::services::request::RequestError;
 
 pub use url::Url;
 
-pub use context_extensions::name_map::NameMap;
-pub use context_extensions::safety_guard::SafetyGuard;
+pub use crate::context_extensions::name_map::NameMap;
+pub use crate::context_extensions::safety_guard::SafetyGuard;
 
-pub use util::{
+pub use crate::util::{
   ellipsis, escape_markdown, format_duration, format_human_time, format_time,
 };
 
 pub use chrono;
 pub use chrono::{Date, DateTime, Duration, Local, TimeZone};
 
-pub use errors::{FondbotError, Result};
+pub use crate::errors::{FondbotError, Result};
 pub use failure::{Fail, SyncFailure};
 
 // lazy_static! {

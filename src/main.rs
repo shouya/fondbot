@@ -39,8 +39,8 @@ mod extensions;
 mod services;
 mod util;
 
-use common::*;
-use context::Context;
+use crate::common::*;
+use crate::context::Context;
 
 const DEBUG: bool = false;
 
@@ -91,7 +91,7 @@ fn main() {
   info!(logger, "Initializing bot context");
   let mut ctx = Context::new(bot.clone(), core.handle(), logger.clone());
 
-  use extensions::*;
+  use crate::extensions::*;
   ctx.plug_ext::<history::Saver>();
   ctx.plug_ext::<afk::Afk>();
   ctx.plug_ext::<weather::Weather>();

@@ -1,7 +1,7 @@
 use chrono::{DateTime, Local, TimeZone};
-use common::*;
-use db::DbMessage;
-use db::SEARCH_PER;
+use crate::common::*;
+use crate::db::DbMessage;
+use crate::db::SEARCH_PER;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Saver {
@@ -25,7 +25,7 @@ pub struct Searcher {
 const EMPTY_PATTERN_PROMPT: &str = "Please enter pattern";
 
 fn chat_name(chat: &tg::MessageChat) -> String {
-  use tg::MessageChat::*;
+  use crate::tg::MessageChat::*;
 
   match chat {
     &Private(..) => "private".into(),
@@ -36,7 +36,7 @@ fn chat_name(chat: &tg::MessageChat) -> String {
 }
 
 fn is_group(chat: &tg::MessageChat) -> bool {
-  use tg::MessageChat::*;
+  use crate::tg::MessageChat::*;
 
   match chat {
     &Private(..) => false,
@@ -47,7 +47,7 @@ fn is_group(chat: &tg::MessageChat) -> bool {
 }
 
 fn to_db_message(msg: &tg::Message, ctx: &Context) -> DbMessage {
-  use tg::ToMessageId;
+  use crate::tg::ToMessageId;
 
   DbMessage {
     id: None,

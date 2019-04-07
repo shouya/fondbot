@@ -1,5 +1,5 @@
 use super::*;
-use common::*;
+use crate::common::*;
 
 #[derive(Clone, Debug)]
 pub struct SetReminder {

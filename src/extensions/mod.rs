@@ -8,7 +8,7 @@ pub mod reminder;
 pub mod yeelight;
 pub mod link_cleanser;
 
-use common::*;
+use crate::common::*;
 
 pub trait BotExtension {
   fn init(ctx: &Context) -> Self

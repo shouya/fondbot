@@ -1,4 +1,4 @@
-use common::*;
+use crate::common::*;
 
 use std;
 use std::sync::Arc;
@@ -9,7 +9,7 @@ use serde_json::Value as JsonValue;
 use std::net::SocketAddr;
 use tokio_core::net::TcpStream;
 
-use tg::ToChatRef;
+use crate::tg::ToChatRef;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 enum Power {
