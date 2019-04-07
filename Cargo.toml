@@ -23,10 +23,10 @@ slog-async = "2.3.0"
 slog-term = "2.4.0"
 diesel = { version = "0.16.0", features = ["sqlite", "chrono"] }
 diesel_codegen = { version = "0.16.0", features = ["sqlite"] }
-tokio-core = "*"
-tokio-timer = "*"
+tokio-core = "0.1.17"
+tokio-timer = "0.2.10"
 # can't use futures 2
-futures = "0.1.21"
+futures = "0.1.26"
 url = "1.7.0"
 curl = "*"
 clippy = { version = "*", optional = true }
