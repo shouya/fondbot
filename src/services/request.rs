@@ -61,7 +61,5 @@ pub fn request<T: DeserializeOwned + 'static>(
       let v = chunk.to_vec();
       String::from_utf8_lossy(&v).to_string()
     })
-    .and_then(|text| {
-      de::from_str(text.as_str()).map_err(|e| RequestError::Json(e))
-    })
+    .and_then(|text| de::from_str(text.as_str()).map_err(RequestError::Json))
 }

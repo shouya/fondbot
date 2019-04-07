@@ -503,7 +503,7 @@ impl State {
       color_temperature = &self.color_temperature,
       brightness = &self.brightness,
       updated_at = format_time(&self.updated_at),
-      dur = format_duration(&dur)
+      dur = format_duration(dur)
     )
   }
 }

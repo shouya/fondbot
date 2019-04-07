@@ -80,11 +80,7 @@ fn main() {
   };
 
   let consume_updates = bot.consume_updates().and_then(|updates| {
-    info!(
-      logger,
-      "Consumed previous {} updates",
-      updates.len()
-    );
+    info!(logger, "Consumed previous {} updates", updates.len());
     ok(())
   });
 
@@ -103,8 +99,8 @@ fn main() {
 
   let serve = {
     let webhook_callback = env::var("TELEGRAM_WEBHOOK_CALLBACK");
-    let bind =
-      env::var("TELEGRAM_WEBHOOK_BIND").unwrap_or(TELEGRAM_DEFAULT_BIND.into());
+    let bind = env::var("TELEGRAM_WEBHOOK_BIND")
+      .unwrap_or_else(|_| TELEGRAM_DEFAULT_BIND.into());
 
     if let Ok(callback_url) = webhook_callback {
       info!(
@@ -137,5 +133,8 @@ fn debug() {
   // // let mut core = reactor::Core::new().unwrap();
   // let res = yee.add_mode(r#"Test-[{"method": "a","params":["a","b"]}]"#);
 
-  println!("{}", url::Url::parse("https://a.com/path?b=1").unwrap().path());
+  println!(
+    "{}",
+    url::Url::parse("https://a.com/path?b=1").unwrap().path()
+  );
 }

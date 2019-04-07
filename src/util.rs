@@ -13,13 +13,11 @@ pub fn escape_markdown(s: &str) -> String {
   s.replace("_", r"\_")
     .replace("*", r"\*")
     .replace("`", r"\`")
-    .into()
 }
 
 #[allow(unused_must_use)]
-pub fn format_duration(d: &Duration) -> String {
+pub fn format_duration(mut d: Duration) -> String {
   let mut str = Vec::new();
-  let mut d = d.clone();
   if d.num_days() >= 1 {
     str.push(format!("{} days", d.num_days()));
     d = d - Duration::days(d.num_days());

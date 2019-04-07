@@ -193,7 +193,7 @@ impl SetReminder {
        ({} from now)\n\n\
        Please adjust according to your need\n",
       format_human_time(&current_time),
-      format_duration(&duration)
+      format_duration(duration)
     );
 
     if self.duration_too_short() {
@@ -231,7 +231,7 @@ impl SetReminder {
     let text = format!(
       "Done, I'll remind you at {} ({} from now)",
       format_human_time(remind_at),
-      format_duration(&remind_at.signed_duration_since(Local::now()))
+      format_duration(remind_at.signed_duration_since(Local::now()))
     );
     let req = msg
       .edit_text(text)

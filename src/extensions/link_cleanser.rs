@@ -22,9 +22,8 @@ impl LinkCleanser {
       return None;
     }
 
-    if url.host_str().is_none() {
-      return None;
-    }
+    // ensure host_str exists
+    url.host_str()?;
 
     Some(url)
   }
@@ -66,7 +65,7 @@ impl LinkCleanser {
   }
 
   fn get_query(url: &Url, key: &str) -> Option<String> {
-    for (k, v) in url.query_pairs().into_iter() {
+    for (k, v) in url.query_pairs() {
       if k == key {
         return Some(v.into());
       }
@@ -75,9 +74,9 @@ impl LinkCleanser {
     None
   }
 
-  fn whitelist_query<'a, 'b, 'c>(
+  fn whitelist_query(
     mut url: Url,
-    keys: &'b [&'c str],
+    keys: &[&str],
     req_all: bool,
   ) -> Option<Url> {
     let kv: Vec<(String, Option<String>)> = keys
@@ -164,8 +163,9 @@ impl BotExtension for LinkCleanser {
       Some(t) => t,
     };
 
-    Self::text_pipeline(&text)
-      .map(|clean_url| ctx.bot.reply_to(msg, clean_url));
+    if let Some(clean_url) = Self::text_pipeline(&text) {
+      ctx.bot.reply_to(msg, clean_url);
+    }
   }
 
   fn name(&self) -> &str {

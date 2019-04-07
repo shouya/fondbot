@@ -57,7 +57,7 @@ impl Afk {
             let name = &state.user_name;
             let afk_at = format_time(&state.afk_at);
             let duration = Local::now().signed_duration_since(state.afk_at);
-            let duration = format_duration(&duration);
+            let duration = format_duration(duration);
             let reason = state.reason.clone().unwrap_or_else(|| "[not given]".into());
 
             format!(
