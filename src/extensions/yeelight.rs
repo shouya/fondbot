@@ -293,7 +293,7 @@ impl Yeelight {
     let n = input.find("-").ok_or(Error::ModeFormat)?;
     let (name, mode) = input.split_at(n);
     let name = name.trim();
-    let mode = mode.trim_left_matches("-");
+    let mode = mode.trim_start_matches("-");
     let mode = serde_json::from_str(mode).map_err(Error::Decode)?;
     if self.modes.iter().find(|(n, _)| n == name).is_some() {
       return Err(Error::ModeAlreadyExist(name.into()));
@@ -405,7 +405,7 @@ impl BotExtension for Yeelight {
       "update" => Box::new(ok(())),
       "on" => self.switch_power(Power::On),
       "off" => self.switch_power(Power::Off),
-      k => self.switch_to_mode(k.trim_left_matches("mode.")),
+      k => self.switch_to_mode(k.trim_start_matches("mode.")),
     };
 
     let msg = query.message.clone();
