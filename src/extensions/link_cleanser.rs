@@ -29,7 +29,7 @@ impl LinkCleanser {
     Some(url)
   }
 
-  fn cleanse_url<'a>(mut url: Url) -> Option<Url> {
+  fn cleanse_url(mut url: Url) -> Option<Url> {
     if Self::domain_suffix_in(&url, &["tmall.com", "taobao.com"])
       && url.path() == "/item.htm"
     {

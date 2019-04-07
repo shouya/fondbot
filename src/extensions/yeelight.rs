@@ -238,7 +238,7 @@ impl Yeelight {
         (*state)
           .clone()
           .map(|x| x.report())
-          .unwrap_or("Unable to get current state".into()),
+          .unwrap_or_else(|| "Unable to get current state".into()),
       )
     });
 
@@ -291,12 +291,12 @@ impl Yeelight {
   }
 
   pub fn add_mode(&mut self, input: &str) -> Result<String> {
-    let n = input.find("-").ok_or(Error::ModeFormat)?;
+    let n = input.find('-').ok_or(Error::ModeFormat)?;
     let (name, mode) = input.split_at(n);
     let name = name.trim();
-    let mode = mode.trim_start_matches("-");
+    let mode = mode.trim_start_matches('-');
     let mode = serde_json::from_str(mode).map_err(Error::Decode)?;
-    if self.modes.iter().find(|(n, _)| n == name).is_some() {
+    if self.modes.iter().any(|(n, _)| n == name) {
       return Err(Error::ModeAlreadyExist(name.into()));
     }
     self.modes.push((name.into(), mode));
@@ -435,7 +435,7 @@ impl BotExtension for Yeelight {
 
   fn report(&self) -> String {
     let state = self.current_state();
-    if let None = state {
+    if state.is_none() {
       return "Unable to get current state.".into();
     }
     state.as_ref().unwrap().report()
@@ -480,7 +480,7 @@ impl State {
     let c = self.color;
     let r = (c >> 16) & 0xff;
     let g = (c >> 8) & 0xff;
-    let b = (c >> 0) & 0xff;
+    let b = c & 0xff;
     format!("{:02X}{:02X}{:02X}", r, g, b)
   }
 

@@ -11,8 +11,8 @@ impl ContextExtension for NameMap {
   }
   fn new_from_env() -> Option<Self> {
     let mut ret: Self = Default::default();
-    let env_value = env::var("NAME_MAP").unwrap_or("".into());
-    let assocs = env_value.split(",");
+    let env_value = env::var("NAME_MAP").unwrap_or_else(|_| "".into());
+    let assocs = env_value.split(',');
     for pair in assocs {
       let mut pair = pair.split("->");
       let user_id: tg::UserId =

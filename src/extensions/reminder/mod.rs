@@ -33,7 +33,7 @@ impl BotExtension for ReminderPool {
     let reminders: RemindersType = ctx
       .db
       .load_conf::<Vec<Reminder>>("reminders")
-      .unwrap_or(Vec::new())
+      .unwrap_or_default()
       .into_iter()
       .filter(|x| x.remind_at >= now && !x.deleted)
       .map(|rem| Arc::new(RefCell::new(rem)))
@@ -108,10 +108,12 @@ impl ReminderPool {
 
       self.reminders.push(reminder);
 
-      msg.map(|msg| ctx.bot.spawn(msg.text_reply("Reminder set")));
-      query.map(|query| {
+      if let Some(msg) = msg {
+        ctx.bot.spawn(msg.text_reply("Reminder set"));
+      }
+      if let Some(query) = query {
         ctx.bot.spawn(query.answer("Reminder set"));
-      });
+      }
     }
 
     self.set_reminder.take();
@@ -162,9 +164,7 @@ impl ReminderPool {
   fn delete_reminder(&mut self, msg: &tg::Message, ctx: &Context) {
     {
       let n: usize = msg.cmd_suffix("del_").unwrap().parse().unwrap();
-      let reminder = if let &Some(rem) =
-        &self.deletion.as_ref().unwrap().into_iter().nth(n)
-      {
+      let reminder = if let Some(rem) = self.deletion.as_ref().unwrap().get(n) {
         rem
       } else {
         let req = msg.chat.text("Invalid index, please try another one");
@@ -182,9 +182,9 @@ impl ReminderPool {
 
     self.save(ctx);
     let listing_msg = self.listing_message.deref().borrow().clone();
-    listing_msg.map(|msg| {
+    if let Some(msg) = listing_msg {
       self.list_reminders(&msg, true, ctx);
-    });
+    }
   }
 
   fn save(&self, ctx: &Context) {

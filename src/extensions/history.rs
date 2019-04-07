@@ -27,10 +27,10 @@ const EMPTY_PATTERN_PROMPT: &str = "Please enter pattern";
 fn chat_name(chat: &tg::MessageChat) -> String {
   use crate::tg::MessageChat::*;
 
-  match chat {
-    &Private(..) => "private".into(),
-    &Group(ref g) => g.title.clone(),
-    &Supergroup(ref g) => g.title.clone(),
+  match *chat {
+    Private(..) => "private".into(),
+    Group(ref g) => g.title.clone(),
+    Supergroup(ref g) => g.title.clone(),
     _ => "Unknown".into(),
   }
 }
@@ -38,10 +38,10 @@ fn chat_name(chat: &tg::MessageChat) -> String {
 fn is_group(chat: &tg::MessageChat) -> bool {
   use crate::tg::MessageChat::*;
 
-  match chat {
-    &Private(..) => false,
-    &Group(..) => true,
-    &Supergroup(..) => true,
+  match *chat {
+    Private(..) => false,
+    Group(..) => true,
+    Supergroup(..) => true,
     _ => false,
   }
 }
@@ -111,7 +111,7 @@ impl BotExtension for Saver {
 
     let msg_text = msg.text_content().unwrap();
 
-    if msg_text.starts_with("/") {
+    if msg_text.starts_with('/') {
       trace!(ctx.logger, "history: Message not saved: bot command")
     }
 
@@ -184,7 +184,7 @@ impl Searcher {
           panic!("invalid flip page action");
         }
       }
-      if search.page <= 0 {
+      if search.page == 0 {
         search.page = 1;
       }
     }
@@ -252,7 +252,7 @@ impl Searcher {
           .user_name
           .as_ref()
           .map(Clone::clone)
-          .unwrap_or("someone".into()),
+          .unwrap_or_else(|| "someone".into()),
         10,
       );
 
@@ -261,7 +261,7 @@ impl Searcher {
           .chat_name
           .as_ref()
           .map(Clone::clone)
-          .unwrap_or("some chat".into()),
+          .unwrap_or_else(|| "some chat".into()),
         11,
       );
       let extract = escape_markdown(&message.text.clone().unwrap_or_default());
@@ -306,7 +306,7 @@ impl Searcher {
     ctx: &Context,
   ) {
     let ref_msg = match self.search {
-      Some(ref search) => search.items.iter().nth(nth_result as usize).clone(),
+      Some(ref search) => search.items.get(nth_result as usize),
       None => None,
     };
 

@@ -61,7 +61,7 @@ impl AudioDetail {
     let api_url =
       format!("https://music.163.com/api/song/detail/?ids=[{}]", id);
     let song = request(&api_url)
-      .map_err(|e| MusicError::Request(e))
+      .map_err(MusicError::Request)
       .and_then(move |value: Value| {
         let song = &value["songs"][0];
         if song.is_object() {
@@ -194,7 +194,7 @@ impl Music {
   }
 
   #[allow(dead_code)]
-  fn send_audio<'a>(
+  fn send_audio(
     bot_token: String,
     audio: Vec<u8>,
     options: HashMap<&'static str, String>,

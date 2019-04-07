@@ -23,7 +23,7 @@ impl InteractiveBuilder for SetReminder {
     }
 
     Some(Reminder {
-      remind_at: self.remind_at.clone().unwrap(),
+      remind_at: self.remind_at.unwrap(),
       set_at: Local::now(),
       content: self.content.clone().unwrap(),
       chat_id: self.chat_id,
@@ -246,7 +246,7 @@ impl SetReminder {
     key: &str,
   ) -> DateTime<Tz> {
     let current = current.clone();
-    let parts: Vec<&str> = key.splitn(3, "/").collect();
+    let parts: Vec<&str> = key.splitn(3, '/').collect();
     let (sign, num, unit) =
       (parts[0], parts[1].parse::<i64>().unwrap(), parts[2]);
 

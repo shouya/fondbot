@@ -58,7 +58,7 @@ impl Afk {
             let afk_at = format_time(&state.afk_at);
             let duration = Local::now().signed_duration_since(state.afk_at);
             let duration = format_duration(&duration);
-            let reason = state.reason.clone().unwrap_or("[not given]".into());
+            let reason = state.reason.clone().unwrap_or_else(|| "[not given]".into());
 
             format!(
                 "{} is *AFK* now.\n\

@@ -24,7 +24,7 @@ where
 
   fn new(db: &Db) -> Self {
     Self::new_from_db(db)
-      .or_else(|| Self::new_from_env())
+      .or_else(Self::new_from_env)
       .unwrap_or_default()
   }
 }

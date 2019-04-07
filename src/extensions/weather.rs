@@ -184,7 +184,7 @@ impl Caiyun {
   fn fmt_aqi(&self) -> String {
     let data = &self.result.hourly;
     let (aqi_lo, aqi_hi, aqi_curr) = lo_hi_curr(&data.aqi).unwrap();
-    if aqi_lo == 10.0 && aqi_hi == 10.0 && aqi_curr == 10.0 {
+    if (aqi_lo - 10.0).abs() + (aqi_hi - 10.0).abs() + (aqi_curr - 10.0).abs() < std::f32::EPSILON*3.0 {
       return "<not available>".into();
     }
     format!(
@@ -215,7 +215,7 @@ fn aqi_level(aqi: i32) -> &'static str {
   }
 }
 
-fn lo_hi_curr<T>(vec: &Vec<_CaiyunResultValue<T>>) -> Result<(T, T, T)>
+fn lo_hi_curr<T>(vec: &[_CaiyunResultValue<T>]) -> Result<(T, T, T)>
 where
   _CaiyunResultValue<T>: Ord,
   T: Copy,
@@ -231,8 +231,8 @@ where
   Ok((lo, hi, curr))
 }
 
-fn fmt_skycon(skycon: &String) -> String {
-  let skycon_fmted = match skycon.as_str() {
+fn fmt_skycon(skycon: &str) -> String {
+  let skycon_fmted = match skycon {
     "CLEAR_DAY" => "☀️",
     "CLEAR_NIGHT" => "☀️🌙",
     "PARTLY_CLOUDY_DAY" => "⛅️",
@@ -244,7 +244,7 @@ fn fmt_skycon(skycon: &String) -> String {
     "FOG" => "🌫",
     "HAZE" => "🌫☠",
     "SLEET" => "🌧❄️",
-    _ => skycon.as_str(),
+    _ => skycon,
   };
   skycon_fmted.into()
 }
