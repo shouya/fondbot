@@ -9,7 +9,6 @@ pub trait WeatherProvider: Display {
   fn from_query(
     city: &str,
     extra: Option<&str>,
-    handle: &reactor::Handle,
   ) -> Box<Future<Item = Self, Error = FondbotError>>
   where
     Self: Sized;
@@ -65,7 +64,7 @@ impl Weather {
       let mut out = format!("*Weather Report for {}*\n", city);
       let msg = msg.clone();
       let bot = ctx.bot.clone();
-      let future = Caiyun::from_query(&city, Some(&long_lat), &ctx.handle)
+      let future = Caiyun::from_query(&city, Some(&long_lat))
         .then(move |result| {
           match result {
             Ok(w) => write!(out, "{}\n", w).ok(),
@@ -143,21 +142,16 @@ impl WeatherProvider for Caiyun {
   fn from_query(
     _: &str,
     long_lat: Option<&str>,
-    handle: &reactor::Handle,
   ) -> Box<Future<Item = Self, Error = FondbotError>> {
     let long_lat = long_lat.unwrap();
     let api_key = env::var("CAIYUN_API_KEY").unwrap();
     let url =
       format!("{}/{}/{}/forecast.json", CAIYUN_API_BASE, api_key, long_lat);
 
-    Box::new(
-      request(handle, &url)
-        .from_err()
-        .map(|mut weather_data: Self| {
-          weather_data.truncate_result();
-          weather_data
-        }),
-    )
+    Box::new(request(&url).from_err().map(|mut weather_data: Self| {
+      weather_data.truncate_result();
+      weather_data
+    }))
   }
 }
 

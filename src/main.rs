@@ -26,7 +26,7 @@ pub extern crate tokio_core;
 
 pub extern crate curl;
 pub extern crate hyper;
-pub extern crate hyper_tls;
+pub extern crate hyper_rustls;
 pub extern crate url;
 
 mod bot;

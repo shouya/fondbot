@@ -32,10 +32,11 @@ fn parse_song_id(url: &str) -> Option<u64> {
       r"http(s?)://music\.163\.com/song\?id=(?P<id>\d+).*",
       r"http(s?)://music\.163\.com/#/m/song\?id=(?P<id>\d+).*",
       r"http(s?)://music\.163\.com/song/(?P<id>\d+).*/?.*",
-    ].into_iter()
-      .map(Regex::new)
-      .map(|x| x.unwrap())
-      .collect();
+    ]
+    .into_iter()
+    .map(Regex::new)
+    .map(|x| x.unwrap())
+    .collect();
   }
 
   for re in PATTERNS.iter() {
@@ -56,13 +57,10 @@ impl AudioDetail {
     format!("https://music.163.com/#/song?id={}", self.id)
   }
 
-  fn from_id(
-    id: u64,
-    handle: &reactor::Handle,
-  ) -> impl Future<Item = Self, Error = MusicError> {
+  fn from_id(id: u64) -> impl Future<Item = Self, Error = MusicError> {
     let api_url =
       format!("https://music.163.com/api/song/detail/?ids=[{}]", id);
-    let song = request(handle, &api_url)
+    let song = request(&api_url)
       .map_err(|e| MusicError::Request(e))
       .and_then(move |value: Value| {
         let song = &value["songs"][0];
@@ -129,7 +127,7 @@ impl Music {
 
     info!(ctx.logger, "Found music query: {}", id);
 
-    let detail_fut = AudioDetail::from_id(id, &ctx.handle)
+    let detail_fut = AudioDetail::from_id(id)
       .map_err(ExtensionError::Music)
       .map_err(FondbotError::Extension);
     let file_fut = Self::download(id)

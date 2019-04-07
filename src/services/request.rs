@@ -5,8 +5,8 @@ use serde_json;
 use serde_json::de;
 
 use hyper;
-use hyper::{header, Client, Method, Request, Uri};
-use hyper_tls::HttpsConnector;
+use hyper::{Body, Client, Request, Uri};
+use hyper_rustls::HttpsConnector;
 
 use std::str::FromStr;
 
@@ -31,18 +31,18 @@ impl From<hyper::Error> for RequestError {
 }
 
 pub fn request<T: DeserializeOwned + 'static>(
-  handle: &reactor::Handle,
   uri: &str,
 ) -> impl Future<Item = T, Error = RequestError> {
   let uri = Uri::from_str(uri).unwrap();
-  let mut req = Request::new(Method::Get, uri.clone());
-  req.headers_mut().set(header::UserAgent::new(USER_AGENT));
+  let req = Request::get(uri.clone())
+    .header("User-Agent", USER_AGENT)
+    .body(Body::empty())
+    .unwrap();
 
-  let request = match uri.scheme().unwrap_or("http") {
-    "http" => Client::new(handle).request(req).from_err(),
-    "https" => Client::configure()
-      .connector(HttpsConnector::new(4, handle).unwrap())
-      .build(handle)
+  let request = match uri.scheme_str().unwrap_or("http") {
+    "http" => Client::new().request(req).from_err(),
+    "https" => Client::builder()
+      .build(HttpsConnector::new(4))
       .request(req)
       .from_err(),
     _ => panic!("Invalid url scheme"),
@@ -56,7 +56,7 @@ pub fn request<T: DeserializeOwned + 'static>(
         ok(response)
       }
     })
-    .and_then(|response| response.body().concat2().from_err())
+    .and_then(|response| response.into_body().concat2().from_err())
     .map(|chunk| {
       let v = chunk.to_vec();
       String::from_utf8_lossy(&v).to_string()
