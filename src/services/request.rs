@@ -10,9 +10,9 @@ use hyper_rustls::HttpsConnector;
 
 use std::str::FromStr;
 
-const USER_AGENT: &'static str = "Mozilla/5.0 (Macintosh; Intel Mac OS X \
-                                  10_12_1) AppleWebKit/537.36 (KHTML, like \
-                                  Gecko) Chrome/54.0.2840.98 Safari/537.36";
+const USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X \
+                          10_12_1) AppleWebKit/537.36 (KHTML, like \
+                          Gecko) Chrome/54.0.2840.98 Safari/537.36";
 
 #[derive(Fail, Debug)]
 pub enum RequestError {

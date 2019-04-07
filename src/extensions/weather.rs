@@ -64,11 +64,11 @@ impl Weather {
       let mut out = format!("*Weather Report for {}*\n", city);
       let msg = msg.clone();
       let bot = ctx.bot.clone();
-      let future = Caiyun::from_query(&city, Some(&long_lat))
-        .then(move |result| {
+      let future =
+        Caiyun::from_query(&city, Some(&long_lat)).then(move |result| {
           match result {
-            Ok(w) => write!(out, "{}\n", w).ok(),
-            Err(e) => write!(out, "Error: {}\n", e).ok(),
+            Ok(w) => writeln!(out, "{}", w).ok(),
+            Err(e) => writeln!(out, "Error: {}", e).ok(),
           };
           bot.spawn(msg.chat.text(out).parse_mode(Markdown));
           ok(())
@@ -107,7 +107,7 @@ struct Caiyun {
   result: _CaiyunResult,
 }
 
-const CAIYUN_API_BASE: &'static str = "https://api.caiyunapp.com/v2";
+const CAIYUN_API_BASE: &str = "https://api.caiyunapp.com/v2";
 use std::fmt;
 
 impl Display for Caiyun {
@@ -118,16 +118,16 @@ impl Display for Caiyun {
     let (hmd_lo, hmd_hi, _) = lo_hi_curr(&data.humidity).unwrap();
     let skycon = self.compress_skycon();
 
-    write!(f, "*Conditions*: {}\n", skycon).ok();
-    write!(
+    writeln!(f, "*Conditions*: {}", skycon).ok();
+    writeln!(
       f,
-      "*Temperature*: {:.0}℃ ({:.0}-{:.0}℃)\n",
+      "*Temperature*: {:.0}℃ ({:.0}-{:.0}℃)",
       temp_curr, temp_lo, temp_hi
     )
     .ok();
-    write!(
+    writeln!(
       f,
-      "*Humidity*: {:.0}-{:.0}%\n",
+      "*Humidity*: {:.0}-{:.0}%",
       hmd_lo * 100.0,
       hmd_hi * 100.0
     )

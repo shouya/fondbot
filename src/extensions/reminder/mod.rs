@@ -135,7 +135,8 @@ impl ReminderPool {
         format_time(&rem.remind_at),
         rem.content,
         i
-      ).ok();
+      )
+      .ok();
     }
     if reminders.is_empty() {
       writeln!(text, "no reminders").ok();
@@ -151,7 +152,6 @@ impl ReminderPool {
       let future = future
         .map(move |listing_msg| {
           (*slot.as_ref().borrow_mut()) = Some(listing_msg);
-          ()
         })
         .map_err(|_| ());
 

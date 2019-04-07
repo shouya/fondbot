@@ -9,7 +9,7 @@ use serde::Serialize;
 use serde_json;
 use std;
 
-const DB_FILE: &'static str = "data.db";
+const DB_FILE: &str = "data.db";
 
 pub struct Db {
   conn: SqliteConnection,

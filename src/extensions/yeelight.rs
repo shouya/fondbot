@@ -126,6 +126,7 @@ impl Yeelight {
     }))
   }
 
+  #[allow(clippy::write_with_newline)]
   fn request(
     &self,
     req: &[Query],

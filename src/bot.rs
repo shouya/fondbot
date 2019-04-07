@@ -88,7 +88,7 @@ impl TgMessageExt for tg::Message {
       static ref RE: Regex = Regex::new(r"^(?P<cmd>/\w+)@\w+bot").unwrap();
     }
     if let tg::MessageKind::Text { ref mut data, .. } = self.kind {
-      if !data.starts_with("/") {
+      if !data.starts_with('/') {
         return;
       }
 
@@ -127,7 +127,7 @@ impl TgMessageExt for tg::Message {
     lazy_static! {
       static ref RE: Regex = Regex::new(r"\s+").unwrap();
     }
-    let arg = self.cmd_arg().unwrap_or("".into());
+    let arg = self.cmd_arg().unwrap_or_else(|| "".into());
     RE.split(&arg).map(|x| x.into()).collect()
   }
 
@@ -181,9 +181,9 @@ pub trait TgCallbackQueryExt {
 
 impl TgCallbackQueryExt for tg::CallbackQuery {
   fn ext(&self) -> Option<&str> {
-    self.data.splitn(2, ".").nth(0)
+    self.data.splitn(2, '.').nth(0)
   }
   fn key(&self) -> Option<&str> {
-    self.data.splitn(2, ".").nth(1)
+    self.data.splitn(2, '.').nth(1)
   }
 }

@@ -44,7 +44,7 @@ use context::Context;
 
 const DEBUG: bool = false;
 
-const TELEGRAM_DEFAULT_BIND: &'static str = "127.0.0.1:6407";
+const TELEGRAM_DEFAULT_BIND: &str = "127.0.0.1:6407";
 
 fn main() {
   let mut core = reactor::Core::new().unwrap();

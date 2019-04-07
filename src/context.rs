@@ -63,7 +63,7 @@ impl Context {
     webhook.serve_at(
       bind
         .parse()
-        .expect(&format!("invalid bind format {}", bind)),
+        .unwrap_or_else(|_| panic!("invalid bind format {}", bind)),
     );
     Box::new(webhook.for_each(move |update| {
       self.process_update(update);
