@@ -5,8 +5,6 @@ extern crate diesel_codegen;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
-pub extern crate serde_derive;
-#[macro_use]
 pub extern crate slog;
 
 pub extern crate failure;
@@ -19,6 +17,7 @@ extern crate slog_term;
 pub extern crate chrono;
 pub extern crate futures;
 pub extern crate regex;
+#[macro_use]
 pub extern crate serde;
 #[macro_use]
 pub extern crate serde_json;
