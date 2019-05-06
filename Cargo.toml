@@ -5,7 +5,7 @@ authors = ["Shou Ya <github@lain.li>"]
 
 
 [dependencies]
-serde = { version = "~1.0.90", features = ["derive"] }
+serde = { version = "~1.0.91", features = ["derive"] }
 chrono = { version = "~0.4.6", features = ["serde"] }
 serde_json = "~1.0.9"
 log = "~0.4.6"
