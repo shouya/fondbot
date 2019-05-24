@@ -28,7 +28,7 @@ tokio-timer = "~0.2.10"
 # can't use futures 2
 futures = "~0.1.26"
 url = "~1.7.2"
-curl = "~0.4.20"
+curl = "~0.4.22"
 clippy = { version = "*", optional = true }
 
 
